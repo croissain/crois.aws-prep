@@ -12,14 +12,105 @@ html {
 body {
   margin: 0;
   background: #f5f3ed;
+  background-image: radial-gradient(rgb(9 105 255 / 0.075) 0.75px, transparent 0.75px);
+  background-size: 22px 22px;
   color: #171815;
-  font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-weight: 500;
+  letter-spacing: 1%;
 }
 .dark body { background: #151714; color: #f2f0e9; }
 ::selection { background: #0969ff; color: white; }
 .text-balance { text-wrap: balance; }
 .tabular { font-variant-numeric: tabular-nums; }
 button, input { font: inherit; }
+
+.loading-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: all;
+}
+.loading-curtain__top,
+.loading-curtain__bottom {
+  position: absolute;
+  inset-inline: 0;
+  height: 50%;
+  background: #0969ff;
+  transition: transform 650ms cubic-bezier(.76, 0, .24, 1);
+  will-change: transform;
+}
+.loading-curtain__top { top: 0; }
+.loading-curtain__bottom { bottom: 0; }
+.loading-curtain__line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 2px;
+  background: white;
+  box-shadow: 0 0 18px rgb(255 255 255 / 0.65);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: loading-line 700ms cubic-bezier(.65, 0, .35, 1) forwards;
+}
+.loading-curtain.is-leaving { pointer-events: none; }
+.loading-curtain.is-leaving .loading-curtain__top { transform: translateY(-100%); }
+.loading-curtain.is-leaving .loading-curtain__bottom { transform: translateY(100%); }
+.loading-curtain.is-leaving .loading-curtain__line {
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+@keyframes loading-line { to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .loading-curtain__line { animation-duration: 1ms; }
+  .loading-curtain__top,
+  .loading-curtain__bottom { transition-duration: 1ms; }
+}
+
+.page-stair {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  overflow: hidden;
+  pointer-events: all;
+}
+.page-stair span {
+  width: 100%;
+  background: #0969ff;
+  transform: translateX(-105%);
+  animation: stair-sweep 850ms cubic-bezier(.76, 0, .24, 1) both;
+}
+.page-stair span:nth-child(2) { animation-delay: 35ms; }
+.page-stair span:nth-child(3) { animation-delay: 70ms; }
+.page-stair span:nth-child(4) { animation-delay: 105ms; }
+.page-stair span:nth-child(5) { animation-delay: 140ms; }
+.page-stair span:nth-child(6) { animation-delay: 175ms; }
+.page-stair span:nth-child(7) { animation-delay: 210ms; }
+@keyframes stair-sweep {
+  0% { transform: translateX(-105%); }
+  35%, 70% { transform: translateX(0); }
+  100% { transform: translateX(105%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-stair { display: none; }
+}
+
+.study-canvas {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgb(9 105 255 / 0.09), transparent 20rem),
+    radial-gradient(rgb(9 105 255 / 0.07) 0.75px, transparent 0.75px);
+  background-size: auto, 22px 22px;
+}
+.dark .study-canvas {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgb(9 105 255 / 0.13), transparent 22rem),
+    radial-gradient(rgb(96 165 250 / 0.08) 0.75px, transparent 0.75px);
+}
 
 /* A layered, progressively masked blur keeps the navigation crisp while the
    page beneath it fades naturally instead of ending at a hard glass edge. */

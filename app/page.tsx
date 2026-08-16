@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import examsData from "@/data/exams.json";
 import questionsData from "@/data/questions.json";
 import { AppShell, View } from "@/components/AppShell";
@@ -15,17 +15,41 @@ import { loadHistory, saveResult } from "@/lib/storage";
 
 const builtInQuestions = questionsData as Question[];
 const exams = examsData as Exam[];
-const shuffle = <T,>(items:T[]) => [...items].sort(()=>Math.random()-.5);
+const shuffle = <T,>(items: T[]) => {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+};
 
 export default function Page() {
   const [view,setView]=useState<View>("home"); const [selectedExamId,setSelectedExamId]=useState(exams[0].id); const [reveal,setReveal]=useState(false); const [questions,setQuestions]=useState<Question[]>(builtInQuestions); const [examQuestions,setExamQuestions]=useState<Question[]>([]); const [result,setResult]=useState<ExamResult|null>(null); const [history,setHistory]=useState<ExamResult[]>([]);
+  const [transitionKey, setTransitionKey] = useState(0);
+  const navigationTimer = useRef<number | null>(null);
+  const transitionTimer = useRef<number | null>(null);
+  const transitionCounter = useRef(0);
   const exam = exams.find(item => item.id === selectedExamId) || exams[0];
   const activeQuestions = questions.filter(question => question.examId === exam.id);
   const navigate = useCallback((next: View) => {
-    setView(next);
-    const hash = next === "home" ? "" : `#${next}`;
-    if (window.location.hash !== hash) window.history.pushState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
-    window.scrollTo(0, 0);
+    if (next === view) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (navigationTimer.current !== null) window.clearTimeout(navigationTimer.current);
+    if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nextTransition = ++transitionCounter.current;
+    setTransitionKey(reducedMotion ? 0 : nextTransition);
+    navigationTimer.current = window.setTimeout(() => {
+      setView(next);
+      const hash = next === "home" ? "" : `#${next}`;
+      if (window.location.hash !== hash) window.history.pushState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+      window.scrollTo(0, 0);
+    }, reducedMotion ? 0 : 540);
+    transitionTimer.current = window.setTimeout(() => setTransitionKey(0), reducedMotion ? 0 : 1150);
+  }, [view]);
+  useEffect(() => () => {
+    if (navigationTimer.current !== null) window.clearTimeout(navigationTimer.current);
+    if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current);
   }, []);
   useEffect(()=>{
     setHistory(loadHistory());
@@ -50,5 +74,5 @@ export default function Page() {
   if(view==="result"&&result)content=<Results result={result} questions={examQuestions} exam={exam} setView={navigate}/>;
   if(view==="history")content=<HistoryView history={history} setHistory={setHistory}/>;
   if(view==="import")content=<ImportQuestions activeCount={questions.length} builtInCount={builtInQuestions.length} onActivate={bank=>setQuestions(bank || builtInQuestions)} setView={navigate}/>;
-  return <AppShell view={view} setView={navigate} exams={exams} examId={exam.id} onExamChange={id => { setSelectedExamId(id); navigate("practice"); }}>{content}</AppShell>;
+  return <AppShell view={view} setView={navigate} transitionKey={transitionKey} exams={exams} examId={exam.id} onExamChange={id => { setSelectedExamId(id); navigate("practice"); }}>{content}</AppShell>;
 }
