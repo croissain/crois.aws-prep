@@ -1,0 +1,20 @@
+[
+  {
+    "id": "aws-saa-c03",
+    "code": "SAA-C03",
+    "name": "AWS Certified Solutions Architect – Associate",
+    "provider": "AWS",
+    "durationMinutes": 130,
+    "questionCount": 65,
+    "passingScore": 72
+  },
+  {
+    "id": "aws-dva-c02",
+    "code": "DVA-C02",
+    "name": "AWS Certified Developer – Associate",
+    "provider": "AWS",
+    "durationMinutes": 130,
+    "questionCount": 65,
+    "passingScore": 72
+  }
+]

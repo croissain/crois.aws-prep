@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+* { box-sizing: border-box; }
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+body {
+  margin: 0;
+  background: #f5f3ed;
+  color: #171815;
+  font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+}
+.dark body { background: #151714; color: #f2f0e9; }
+::selection { background: #0969ff; color: white; }
+.text-balance { text-wrap: balance; }
+.tabular { font-variant-numeric: tabular-nums; }
+button, input { font: inherit; }
+
+/* A layered, progressively masked blur keeps the navigation crisp while the
+   page beneath it fades naturally instead of ending at a hard glass edge. */
+.progressive-header {
+  isolation: isolate;
+  background: linear-gradient(to bottom, rgb(245 243 237 / 0.94) 0 72%, rgb(245 243 237 / 0.66) 88%, transparent);
+}
+.progressive-header::before {
+  position: absolute;
+  inset: 0 0 -1.25rem;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0 58%, rgb(0 0 0 / 0.78) 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0 58%, rgb(0 0 0 / 0.78) 74%, transparent 100%);
+}
+.progressive-header::after {
+  position: absolute;
+  inset: auto 0 -1.25rem;
+  height: 1.25rem;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(245 243 237 / 0.18), transparent);
+}
+.dark .progressive-header {
+  background: linear-gradient(to bottom, rgb(21 23 20 / 0.95) 0 72%, rgb(21 23 20 / 0.68) 88%, transparent);
+}
+.dark .progressive-header::after {
+  background: linear-gradient(to bottom, rgb(21 23 20 / 0.2), transparent);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid #0969ff;
+  outline-offset: 3px;
+}
