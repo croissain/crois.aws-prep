@@ -55,7 +55,7 @@ export default function Page() {
     setHistory(loadHistory());
     const syncFromUrl = () => {
       const candidate = window.location.hash.slice(1) as View;
-      const valid: View[] = ["home","practice","setup","exam","result","history","import"];
+      const valid: View[] = ["home","practice","bookmarks","setup","exam","result","history","import"];
       setView(valid.includes(candidate) ? candidate : "home");
     };
     syncFromUrl(); window.addEventListener("popstate", syncFromUrl); window.addEventListener("hashchange", syncFromUrl);
@@ -69,6 +69,7 @@ export default function Page() {
   },[examQuestions,navigate,exam.id]);
   let content:React.ReactNode=<Home setView={navigate}/>;
   if(view==="practice")content=<Practice questions={activeQuestions} exam={exam}/>;
+  if(view==="bookmarks")content=<Practice questions={activeQuestions} exam={exam} savedOnly/>;
   if(view==="setup")content=<ExamSetup exam={exam} reveal={reveal} setReveal={setReveal} start={start}/>;
   if(view==="exam")content=<ExamRunner exam={exam} questions={examQuestions} reveal={reveal} onFinish={finish}/>;
   if(view==="result"&&result)content=<Results result={result} questions={examQuestions} exam={exam} setView={navigate}/>;

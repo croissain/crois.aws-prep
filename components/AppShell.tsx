@@ -1,10 +1,10 @@
 "use client";
 
-import { BookOpen, ChevronDown, Clock3, History, Moon, Sun, Cloud, Upload } from "lucide-react";
+import { Bookmark, BookOpen, ChevronDown, Clock3, History, Moon, Sun, Cloud, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Exam } from "@/lib/types";
 
-export type View = "home" | "practice" | "setup" | "exam" | "result" | "history" | "import";
+export type View = "home" | "practice" | "bookmarks" | "setup" | "exam" | "result" | "history" | "import";
 
 export function AppShell({ view, setView, transitionKey, children, exams, examId, onExamChange }: { view: View; setView: (v: View) => void; transitionKey: number; children: React.ReactNode; exams: Exam[]; examId: string; onExamChange: (id: string) => void }) {
   const [dark, setDark] = useState(false);
@@ -25,9 +25,9 @@ export function AppShell({ view, setView, transitionKey, children, exams, examId
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       if (target.matches("input, select, textarea") || target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
-      const destinations: Record<string, View> = { "1": "practice", "2": "setup", "3": "history", "4": "import" };
+      const destinations: Record<string, View> = { "1": "practice", "2": "setup", "3": "history", "4": "bookmarks", "5": "import" };
       if (destinations[event.key]) { event.preventDefault(); setView(destinations[event.key]); }
-      if (event.key === "/" && view === "practice") { event.preventDefault(); document.querySelector<HTMLInputElement>('input[placeholder="Search questions"]')?.focus(); }
+      if (event.key === "/" && ["practice", "bookmarks"].includes(view)) { event.preventDefault(); document.querySelector<HTMLInputElement>('input[placeholder="Search questions"]')?.focus(); }
     };
     const onPointerUp = (event: PointerEvent) => {
       if (!(event.target as HTMLElement).closest("button, select, a")) return;
@@ -54,6 +54,7 @@ export function AppShell({ view, setView, transitionKey, children, exams, examId
           <Nav active={view === "practice"} onClick={() => setView("practice")} icon={<BookOpen size={16}/>} text="Practice" />
           <Nav active={["setup","exam","result"].includes(view)} onClick={() => setView("setup")} icon={<Clock3 size={16}/>} text="Mock exam" />
           <Nav active={view === "history"} onClick={() => setView("history")} icon={<History size={16}/>} text="History" />
+          <Nav active={view === "bookmarks"} onClick={() => setView("bookmarks")} icon={<Bookmark size={16}/>} text="Saved" />
           <Nav active={view === "import"} onClick={() => setView("import")} icon={<Upload size={16}/>} text="Import" />
         </nav>
         <div className="flex items-center gap-2">
@@ -68,6 +69,7 @@ export function AppShell({ view, setView, transitionKey, children, exams, examId
       <MobileNav active={view === "practice"} onClick={() => setView("practice")} icon={<BookOpen size={18}/>} text="Practice" />
       <MobileNav active={["setup","exam","result"].includes(view)} onClick={() => setView("setup")} icon={<Clock3 size={18}/>} text="Exam" />
       <MobileNav active={view === "history"} onClick={() => setView("history")} icon={<History size={18}/>} text="History" />
+      <MobileNav active={view === "bookmarks"} onClick={() => setView("bookmarks")} icon={<Bookmark size={18}/>} text="Saved" />
       <MobileNav active={view === "import"} onClick={() => setView("import")} icon={<Upload size={18}/>} text="Import" />
     </nav>
   </div>;
@@ -77,5 +79,5 @@ function Nav({ active, onClick, icon, text }: { active: boolean; onClick: () => 
   return <button onClick={onClick} className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm transition ${active ? "bg-ai text-white" : "text-black/55 hover:bg-black/5 dark:text-white/55 dark:hover:bg-white/5"}`}>{icon}{text}</button>;
 }
 function MobileNav({ active, onClick, icon, text }: { active: boolean; onClick: () => void; icon: React.ReactNode; text: string }) {
-  return <button onClick={onClick} className={`flex min-w-20 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] ${active ? "bg-ai text-white" : "text-black/50 dark:text-white/50"}`}>{icon}{text}</button>;
+  return <button onClick={onClick} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] ${active ? "bg-ai text-white" : "text-black/50 dark:text-white/50"}`}>{icon}{text}</button>;
 }
