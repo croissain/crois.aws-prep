@@ -6,11 +6,12 @@ import { loadBookmarks, saveBookmarks } from "@/lib/bookmarks";
 import { HighlightStore, loadHighlights, saveHighlights, TextHighlight } from "@/lib/highlights";
 
 const rememberedPages = new Map<string, number>();
+const PAGE_STORAGE_PREFIX = "crois.aws-prep:page:";
 
 export function Practice({ questions, exam, savedOnly = false }: { questions: Question[]; exam: Exam; savedOnly?: boolean }) {
   const pageKey = `${exam.id}:${savedOnly ? "saved" : "practice"}`;
   const [query, setQuery] = useState(""); const [tag, setTag] = useState("All topics"); const [page, setPage] = useState(() => rememberedPages.get(pageKey) || 1); const [pageSize, setPageSize] = useState(20); const [open, setOpen] = useState<Set<string>>(new Set());
-  const previousPageKey = useRef(pageKey);
+  const previousPageKey = useRef("");
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [highlights, setHighlights] = useState<HighlightStore>({});
@@ -22,10 +23,12 @@ export function Practice({ questions, exam, savedOnly = false }: { questions: Qu
   useEffect(() => {
     if (previousPageKey.current !== pageKey) {
       previousPageKey.current = pageKey;
-      setPage(rememberedPages.get(pageKey) || 1);
+      const stored = Number.parseInt(localStorage.getItem(`${PAGE_STORAGE_PREFIX}${pageKey}`) || "", 10);
+      setPage(rememberedPages.get(pageKey) || (Number.isFinite(stored) && stored > 0 ? stored : 1));
       return;
     }
     rememberedPages.set(pageKey, page);
+    localStorage.setItem(`${PAGE_STORAGE_PREFIX}${pageKey}`, String(page));
   }, [page, pageKey]);
   useEffect(() => { if (page > pages) setPage(pages); }, [page, pages]);
   const update = (fn: () => void) => { fn(); setPage(1); };
