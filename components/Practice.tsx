@@ -5,8 +5,12 @@ import { Exam, Question } from "@/lib/types";
 import { loadBookmarks, saveBookmarks } from "@/lib/bookmarks";
 import { HighlightStore, loadHighlights, saveHighlights, TextHighlight } from "@/lib/highlights";
 
+const rememberedPages = new Map<string, number>();
+
 export function Practice({ questions, exam, savedOnly = false }: { questions: Question[]; exam: Exam; savedOnly?: boolean }) {
-  const [query, setQuery] = useState(""); const [tag, setTag] = useState("All topics"); const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(10); const [open, setOpen] = useState<Set<string>>(new Set());
+  const pageKey = `${exam.id}:${savedOnly ? "saved" : "practice"}`;
+  const [query, setQuery] = useState(""); const [tag, setTag] = useState("All topics"); const [page, setPage] = useState(() => rememberedPages.get(pageKey) || 1); const [pageSize, setPageSize] = useState(20); const [open, setOpen] = useState<Set<string>>(new Set());
+  const previousPageKey = useRef(pageKey);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [highlights, setHighlights] = useState<HighlightStore>({});
@@ -15,6 +19,14 @@ export function Practice({ questions, exam, savedOnly = false }: { questions: Qu
   const tags = ["All topics", ...Array.from(new Set(sourceQuestions.flatMap(q => q.tags)))];
   const filtered = useMemo(() => sourceQuestions.filter(q => (tag === "All topics" || q.tags.includes(tag)) && (q.prompt + q.choices.map(c => c.text).join(" ")).toLowerCase().includes(query.toLowerCase())), [sourceQuestions, query, tag]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize)); const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    if (previousPageKey.current !== pageKey) {
+      previousPageKey.current = pageKey;
+      setPage(rememberedPages.get(pageKey) || 1);
+      return;
+    }
+    rememberedPages.set(pageKey, page);
+  }, [page, pageKey]);
   useEffect(() => { if (page > pages) setPage(pages); }, [page, pages]);
   const update = (fn: () => void) => { fn(); setPage(1); };
   return <section className="mx-auto max-w-5xl px-5 pb-24 pt-12 lg:px-8 lg:pt-16">
@@ -89,10 +101,28 @@ function captureHighlight(container: HTMLElement) {
   const before = document.createRange();
   before.selectNodeContents(startRegion);
   before.setEnd(range.startContainer, range.startOffset);
-  const start = before.toString().length;
-  const end = start + range.toString().length;
+  const rawStart = before.toString().length;
+  const rawEnd = rawStart + range.toString().length;
+  const { start, end } = snapToWords(startRegion.textContent || "", rawStart, rawEnd);
   selection.removeAllRanges();
   return end > start ? { region: startRegion.dataset.highlightRegion || "", start, end } : null;
+}
+
+function snapToWords(text: string, rawStart: number, rawEnd: number) {
+  const isWordCharacter = (character: string | undefined) => Boolean(character && /[\p{L}\p{N}'’-]/u.test(character));
+  let start = Math.max(0, Math.min(rawStart, text.length));
+  let end = Math.max(start, Math.min(rawEnd, text.length));
+  if (isWordCharacter(text[start]) || isWordCharacter(text[start - 1])) {
+    while (start > 0 && isWordCharacter(text[start - 1])) start--;
+  } else {
+    while (start < end && !isWordCharacter(text[start])) start++;
+  }
+  if (isWordCharacter(text[end - 1])) {
+    while (end < text.length && isWordCharacter(text[end])) end++;
+  } else {
+    while (end > start && !isWordCharacter(text[end - 1])) end--;
+  }
+  return { start, end };
 }
 
 function updateHighlights(current: HighlightStore, questionId: string, region: string, start: number, end: number) {
