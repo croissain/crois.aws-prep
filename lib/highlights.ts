@@ -3,6 +3,7 @@ export type TextHighlight = {
   region: string;
   start: number;
   end: number;
+  kind?: "highlight" | "strike";
 };
 
 export type HighlightStore = Record<string, TextHighlight[]>;
