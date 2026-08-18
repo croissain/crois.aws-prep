@@ -13312,8 +13312,7 @@
     ],
     "correctChoiceIds": [
       "d",
-      "b",
-      "a"
+      "b"
     ],
     "explanation": "It is A and D. Proof is in link below. https://aws.amazon.com/caching/session-management/",
     "tags": [
