@@ -18,6 +18,13 @@ export type Exam = {
   questionCount: number;
   passingScore: number;
 };
+export type Preset = {
+  id: string;
+  examId: string;
+  name: string;
+  source: string;
+  questions: Question[];
+};
 export type ExamResult = {
   id: string;
   examId: string;

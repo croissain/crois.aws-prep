@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import examsData from "@/data/exams.json";
 import questionsData from "@/data/questions.json";
+import presetsData from "@/data/presets.json";
 import { AppShell, View } from "@/components/AppShell";
 import { Home } from "@/components/Home";
 import { Practice } from "@/components/Practice";
@@ -10,10 +11,11 @@ import { ExamRunner } from "@/components/ExamRunner";
 import { Results } from "@/components/Results";
 import { HistoryView } from "@/components/HistoryView";
 import { ImportQuestions } from "@/components/ImportQuestions";
-import { Exam, ExamResult, Question } from "@/lib/types";
+import { Exam, ExamResult, Preset, Question } from "@/lib/types";
 import { loadHistory, saveResult } from "@/lib/storage";
 
-const builtInQuestions = questionsData as Question[];
+const presets = presetsData as Preset[];
+const builtInQuestions = [...(questionsData as Question[]), ...presets.flatMap(preset => preset.questions)];
 const exams = examsData as Exam[];
 const shuffle = <T,>(items: T[]) => {
   const shuffled = [...items];
@@ -25,13 +27,15 @@ const shuffle = <T,>(items: T[]) => {
 };
 
 export default function Page() {
-  const [view,setView]=useState<View>("home"); const [selectedExamId,setSelectedExamId]=useState(exams[0].id); const [reveal,setReveal]=useState(false); const [questions,setQuestions]=useState<Question[]>(builtInQuestions); const [examQuestions,setExamQuestions]=useState<Question[]>([]); const [result,setResult]=useState<ExamResult|null>(null); const [history,setHistory]=useState<ExamResult[]>([]);
+  const [view,setView]=useState<View>("home"); const [selectedExamId,setSelectedExamId]=useState(exams[0].id); const [reveal,setReveal]=useState(false); const [presetId,setPresetId]=useState<string|null>(null); const [questions,setQuestions]=useState<Question[]>(builtInQuestions); const [examQuestions,setExamQuestions]=useState<Question[]>([]); const [result,setResult]=useState<ExamResult|null>(null); const [history,setHistory]=useState<ExamResult[]>([]);
   const [transitionKey, setTransitionKey] = useState(0);
   const navigationTimer = useRef<number | null>(null);
   const transitionTimer = useRef<number | null>(null);
   const transitionCounter = useRef(0);
   const exam = exams.find(item => item.id === selectedExamId) || exams[0];
   const activeQuestions = questions.filter(question => question.examId === exam.id);
+  const examPresets = presets.filter(preset => preset.examId === exam.id);
+  const preset = examPresets.find(item => item.id === presetId);
   const navigate = useCallback((next: View) => {
     if (next === view) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (navigationTimer.current !== null) window.clearTimeout(navigationTimer.current);
@@ -61,7 +65,7 @@ export default function Page() {
     syncFromUrl(); window.addEventListener("popstate", syncFromUrl); window.addEventListener("hashchange", syncFromUrl);
     return () => { window.removeEventListener("popstate", syncFromUrl); window.removeEventListener("hashchange", syncFromUrl); };
   },[]);
-  const start=()=>{setExamQuestions(shuffle(activeQuestions).slice(0,exam.questionCount));setResult(null);navigate("exam")};
+  const start=()=>{setExamQuestions(preset ? preset.questions : shuffle(activeQuestions).slice(0,exam.questionCount));setResult(null);navigate("exam")};
   const finish=useCallback((answers:Record<string,string[]>,elapsedSeconds:number)=>{
     const current=examQuestions; let correct=0; const tagStats:ExamResult["tagStats"]={};
     current.forEach(q=>{const a=answers[q.id]||[];const right=a.length===q.correctChoiceIds.length&&a.every(x=>q.correctChoiceIds.includes(x));if(right)correct++;q.tags.forEach(tag=>{tagStats[tag]??={correct:0,total:0};tagStats[tag].total++;if(right)tagStats[tag].correct++})});
@@ -70,7 +74,7 @@ export default function Page() {
   let content:React.ReactNode=<Home setView={navigate}/>;
   if(view==="practice")content=<Practice questions={activeQuestions} exam={exam}/>;
   if(view==="bookmarks")content=<Practice questions={activeQuestions} exam={exam} savedOnly/>;
-  if(view==="setup")content=<ExamSetup exam={exam} reveal={reveal} setReveal={setReveal} start={start}/>;
+  if(view==="setup")content=<ExamSetup exam={exam} presets={examPresets} presetId={preset?.id ?? null} setPresetId={setPresetId} reveal={reveal} setReveal={setReveal} start={start}/>;
   if(view==="exam")content=<ExamRunner exam={exam} questions={examQuestions} reveal={reveal} onFinish={finish}/>;
   if(view==="result"&&result)content=<Results result={result} questions={examQuestions} exam={exam} setView={navigate}/>;
   if(view==="history")content=<HistoryView history={history} setHistory={setHistory}/>;
