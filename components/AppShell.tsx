@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookOpen, ChevronDown, Clock3, History, Moon, Sun, Cloud, Upload } from "lucide-react";
+import { ArrowUp, Bookmark, BookOpen, ChevronDown, Clock3, History, Moon, Sun, Cloud, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Exam } from "@/lib/types";
 
@@ -19,6 +19,14 @@ export function AppShell({ view, setView, transitionKey, children, exams, examId
     const doneTimer = window.setTimeout(() => setBootPhase("done"), 1400);
     return () => { window.clearTimeout(leaveTimer); window.clearTimeout(doneTimer); };
   }, []);
+  const [showTop, setShowTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const backToTop = () => window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   const toggle = () => { const n = !dark; setDark(n); document.documentElement.classList.toggle("dark", n); localStorage.setItem("crois.aws-prep:theme", n ? "dark" : "light"); };
 
   useEffect(() => {
@@ -65,6 +73,7 @@ export function AppShell({ view, setView, transitionKey, children, exams, examId
     </header>
     <main id="main-content" tabIndex={-1}>{children}</main>
     {!(["exam"].includes(view)) && <footer className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-black/10 px-5 py-8 text-xs text-black/45 dark:border-white/10 dark:text-white/40 sm:flex-row sm:items-center sm:justify-between lg:px-8"><span>© 2026 crois.aws-prep - Make with goût by croissain</span><span>AWS and related marks are trademarks of Amazon.com, Inc.</span></footer>}
+    <button aria-label="Back to top" tabIndex={showTop ? 0 : -1} aria-hidden={!showTop} onClick={backToTop} className={`fixed right-5 z-40 grid size-11 place-items-center rounded-full border border-black/10 bg-white/90 text-black/60 shadow-soft backdrop-blur-xl transition duration-300 hover:border-ai hover:text-ai dark:border-white/10 dark:bg-[#23251f]/95 dark:text-white/60 md:bottom-6 md:right-6 ${view === "exam" ? "bottom-40 lg:bottom-6" : "bottom-24"} ${showTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`}><ArrowUp size={18}/></button>
     <nav className="fixed inset-x-3 bottom-3 z-50 flex justify-around rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#23251f]/95 md:hidden">
       <MobileNav active={view === "practice"} onClick={() => setView("practice")} icon={<BookOpen size={18}/>} text="Practice" />
       <MobileNav active={["setup","exam","result"].includes(view)} onClick={() => setView("setup")} icon={<Clock3 size={18}/>} text="Exam" />

@@ -22230,7 +22230,7 @@
       }
     ],
     "correctChoiceIds": [
-      "a"
+      "b"
     ],
     "explanation": "I'm not sure, but I think this question is from professional solution architect question pool. Please have a look at this one as well. https://www.examtopics.com/discussions/amazon/view/112780-exam-aws-certified-solutions-architect-professional-sap-c02/",
     "tags": [
@@ -22982,9 +22982,9 @@
       }
     ],
     "correctChoiceIds": [
-      "d"
+      "c"
     ],
-    "explanation": "Locking EBS Snapshots (Option D): The \"lock\" feature in AWS allows you to prevent accidental deletion of resources, including EBS snapshots. This can be set at the snapshot level, providing a straightforward and effective way to meet the requirements without changing the administrative rights of the storage administrator user.",
+    "explanation": "The correct answer is C. Recycle Bin (C) meets all requirements because it acts as a safety net after deletion, meaning the storage administrator’s actual permission to execute the \"Delete\" command remains completely unchanged. It also requires the least administrative effort because a single blanket rule automatically protects all daily tagged snapshots. In contrast, Snapshot Lock (D) is incorrect because locking a snapshot either completely strips the administrator of their deletion rights (Compliance mode) or requires you to modify IAM policies to restrict who can bypass the lock (Governance mode), directly violating the constraint to not change administrative rights.",
     "tags": [
       "Security",
       "Amazon EC2",
@@ -23403,8 +23403,8 @@
       }
     ],
     "correctChoiceIds": [
-      "a",
-      "b"
+      "d",
+      "e"
     ],
     "explanation": "\"Amazon Forecast is no longer available to new customers. Existing customers of Amazon Forecast can continue to use the service as normal\" \"After careful consideration, we have made the decision to close new customer access to Amazon Forecast, effective July 29, 2024.\" This question will either be removed or reformulated to exclude Forecast as the service is no longer available to new customers.",
     "tags": [
@@ -24166,8 +24166,7 @@
     ],
     "correctChoiceIds": [
       "b",
-      "e",
-      "a"
+      "e"
     ],
     "explanation": "My vote is for BE",
     "tags": [
@@ -26861,9 +26860,9 @@
       }
     ],
     "correctChoiceIds": [
-      "d"
+      "a"
     ],
-    "explanation": "Option D... This is preventive control of Control Tower where we use SCP to disallow actions that lead to policy violation.",
+    "explanation": "Leverages AWS CloudFormation Hooks to inspect resources before they are created. If a template attempts to provision an EC2 instance with a public IP or an IAM policy with a wildcard (`*`) or inline policy, the proactive control **blocks the CloudFormation stack deployment**.",
     "tags": [
       "Security",
       "Amazon EC2",
@@ -27141,9 +27140,9 @@
       }
     ],
     "correctChoiceIds": [
-      "a"
+      "b"
     ],
-    "explanation": "Add multiple MFA devices for the root user account: AWS does not support multiple MFA devices for the root user. Only one MFA device can be associated at a time.",
+    "explanation": "AWS IAM allows you to attach **multiple MFA devices** (up to 8 MFA devices) to the AWS account **root user** as well as IAM users",
     "tags": [
       "Security",
       "IAM & Organizations",

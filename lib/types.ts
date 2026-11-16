@@ -17,6 +17,8 @@ export type Exam = {
   durationMinutes: number;
   questionCount: number;
   passingScore: number;
+  /** Domain weighting for generated mock exams; `tag` matches a question's first tag. */
+  domains?: Array<{ tag: string; label: string; weight: number }>;
 };
 export type Preset = {
   id: string;

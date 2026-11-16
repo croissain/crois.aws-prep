@@ -6,7 +6,13 @@
     "provider": "AWS",
     "durationMinutes": 130,
     "questionCount": 65,
-    "passingScore": 72
+    "passingScore": 72,
+    "domains": [
+      { "tag": "Security", "label": "Design Secure Architectures", "weight": 30 },
+      { "tag": "Resilience", "label": "Design Resilient Architectures", "weight": 26 },
+      { "tag": "Performance", "label": "Design High-Performing Architectures", "weight": 24 },
+      { "tag": "Cost Optimization", "label": "Design Cost-Optimized Architectures", "weight": 20 }
+    ]
   },
   {
     "id": "aws-dva-c02",

@@ -68,12 +68,9 @@ function QuestionCard({ q, examCode, number, selected, onSelect, highlights, onH
   const [noteOpen, setNoteOpen] = useState(false);
   const suppressChoiceClick = useRef(false);
   const copyQuestion = async () => {
-    const answer = q.correctChoiceIds.map(id => `${id.toUpperCase()}. ${q.choices.find(choice => choice.id === id)?.text}`).join("\n");
     const text = [
       `AWS ${examCode} Practice Question ${number}`, "", q.prompt, "",
-      ...q.choices.map(choice => `${choice.id.toUpperCase()}. ${choice.text}`), "",
-      `Correct answer${q.correctChoiceIds.length > 1 ? "s" : ""}:`, answer, "",
-      `Explanation: ${q.explanation}`, `Topics: ${q.tags.join(", ")}`
+      ...q.choices.map(choice => `${choice.id.toUpperCase()}. ${choice.text}`)
     ].join("\n");
     await navigator.clipboard.writeText(text);
     setCopied(true);
