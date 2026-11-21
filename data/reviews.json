@@ -1,0 +1,1135 @@
+{
+  "dva-0007": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "b",
+      "d"
+    ],
+    "confidence": "low",
+    "note": "Both B with D (backoff plus more read capacity) and B with C (use an SDK) are commonly argued. UnprocessedKeys usually means the table's read capacity was exceeded, so adding RCU addresses the cause, while SDK retries mainly help with throttling errors and do not automatically resend unprocessed keys.",
+    "aiExplanation": "BatchGetItem returns UnprocessedKeys when part of the batch could not be read, most often because the request exceeded the table's provisioned read throughput. The application should retry only the unprocessed keys with exponential backoff and jitter (B), which spreads retries out instead of hammering the table again. Increasing the provisioned read capacity (D) reduces how often throttling causes unprocessed keys in the first place; write capacity (E) is irrelevant for reads. Retrying immediately (A) tends to be throttled again. Switching to an AWS SDK (C) adds automatic retries for throttling exceptions, which is helpful, but the low-level SDK calls still return UnprocessedKeys that your code must resend, which is why many treat D as the better second choice."
+  },
+  "dva-0047": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "A is clear, but the second choice is debatable between E (remove OS patching from UserData so boot is faster) and C (use CodeDeploy to push the latest app version to new instances); both keep the app out of the AMI.",
+    "aiExplanation": "Baking only the OS patches and agents into an EC2 Image Builder AMI (A), which Image Builder can test and validate, removes the slowest UserData work while keeping the number of images low, because the AMI does not have to be rebuilt every time the application changes. Once patching is in the AMI, removing the patching commands from the UserData script (E) is what actually shortens instance start-up, and UserData can still pull the latest application build at boot. Option B bakes the application version into the AMI, so every release needs a new image, which conflicts with minimizing images. Option C (CodeDeploy deploying at launch) is also a reasonable way to get the latest version and is why the question is debatable; CodePipeline (D) orchestrates releases and does not deploy to instances at launch by itself."
+  },
+  "dva-0075": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images), so the key cannot be checked here. Look for the option whose event pattern matches the CodeCommit pullRequestCreated and pullRequestSourceBranchUpdated events.",
+    "aiExplanation": "CodeCommit publishes a CodeCommit Pull Request State Change event to Amazon EventBridge, and its detail.event field says what happened. A pull request being opened produces pullRequestCreated, and new commits pushed to the source branch of an open pull request produce pullRequestSourceBranchUpdated. An EventBridge rule whose pattern matches source aws.codecommit, detail-type CodeCommit Pull Request State Change and both of those event values covers created and updated pull requests and can target the Lambda function that starts CodeBuild. Options listing only one of these events, or invented event names, do not meet the requirement."
+  },
+  "dva-0119": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "I believe C and E. Removing a client from a WebSocket API is done by calling the @connections callback URL with DELETE, and no keyed option provides that ability; ElastiCache (D) is just one possible storage choice and is not required.",
+    "aiExplanation": "API Gateway WebSocket APIs invoke the reserved $connect and $disconnect routes every time a client connects or disconnects, so implementing them in the backend lets the service see and record each client's connection churn (E). To actually remove a misbehaving client, the backend calls the connection's callback URL (the @connections API, https://{api-id}.execute-api.{region}.amazonaws.com/{stage}/@connections/{connection_id}) with an HTTP DELETE, which forcibly disconnects it (C). Storing status in Amazon ElastiCache (D) is an implementation detail that could equally be DynamoDB, and on its own it does not give the ability to remove the client. Switching the backend to HTTP APIs or REST APIs (A, B) changes nothing about WebSocket connection management."
+  },
+  "dva-0128": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "I believe A. Changing the Node.js platform version while deploying and testing new code is the textbook Elastic Beanstalk blue/green case (clone the environment, test, swap URLs); an immutable update does not let you test before traffic shifts and cannot change platform branches.",
+    "aiExplanation": "Elastic Beanstalk recommends a blue/green deployment for platform version changes, especially across platform branches such as a new Node.js major version: you clone the production environment onto the new platform version, deploy and test the new code there, and then use Swap Environment URLs, which switches the CNAME with zero downtime. This also gives an instant rollback by swapping back. An immutable update (C) launches new instances and moves traffic once health checks pass, but there is no separate stage to test the new code before customers hit it, and immutable updates cannot move to a different platform branch. All at once (B) causes downtime, and a rolling deployment (D) reduces capacity and mixes versions during the update."
+  },
+  "dva-0129": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B. A unit test should invoke the handler with a sample SQS event payload rather than depend on a real SQS queue; creating a real queue (C) makes it an integration test, and the Lambda code does not poll SQS itself anyway.",
+    "aiExplanation": "When Lambda consumes from Amazon SQS, the event source mapping polls the queue and passes the handler an event object containing a Records array, so the function code never reads from the queue directly. A unit test therefore just builds a sample SQS event (for example with sam local generate-event sqs receive-message or a JSON fixture) and calls the handler in the test framework, checking the result; this is fast, isolated and runs in CI without AWS resources. Creating a real test queue (C) or deploying a stack and invoking the deployed function (A) are integration tests that depend on live AWS infrastructure. Running aws lambda invoke against a deployed function (D) is also not a unit test. Option B's wording is awkward, but it is the only one built on a test event."
+  },
+  "dva-0138": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "d"
+    ],
+    "confidence": "high",
+    "note": "I believe A and D, which is also what the stored explanation itself says. Option E is wrong because cloudwatch:PullLogs is not a real IAM action and container log shipping uses the task execution role, not the task role.",
+    "aiExplanation": "On Amazon ECS with Fargate there are no daemonsets, so the X-Ray daemon runs as a sidecar container in each task definition, and the task role must allow xray:PutTraceSegments and xray:PutTelemetryRecords (A). The application is instrumented with the AWS X-Ray SDK, which sends trace segments over UDP to the local daemon rather than calling the X-Ray API directly (D). Option B fails because daemonsets are a Kubernetes concept and do not exist on Fargate. Option C fails because there is no PutXrayTrace API and the SDK is designed to talk to the daemon. Option E names a nonexistent permission (cloudwatch:PullLogs), and the awslogs driver uses the task execution role with logs:CreateLogStream and logs:PutLogEvents."
+  },
+  "dva-0139": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The policy choices for this question are missing (they were images), so the key cannot be checked here. The right policy allows only s3:GetObject on arn:aws:s3:::DOC-EXAMPLE-BUCKET/doc.txt.",
+    "aiExplanation": "Least privilege means granting only the single action the application needs on the single resource it touches. Reading one object requires only s3:GetObject, with the Resource set to the object ARN arn:aws:s3:::DOC-EXAMPLE-BUCKET/doc.txt. Policies that use s3:* or s3:Get*, or that target the whole bucket with arn:aws:s3:::DOC-EXAMPLE-BUCKET/*, grant more than needed. s3:ListBucket is also unnecessary, because the application knows the exact key."
+  },
+  "dva-0140": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The question is poorly worded and the options are vague; D (rebase the feature branch onto main) is the most sensible, but the phrase 'stop the pull' and the stored explanation make little technical sense.",
+    "aiExplanation": "The developer's feature branch has fallen behind main, so the cleanest fix is to bring the latest main commits into the feature branch and resolve the conflicts once, locally. Rebasing the feature branch onto main replays the developer's commits on top of the current main, letting them resolve each conflict and leaving a linear history that merges cleanly into main afterward. Creating a new branch or re-cloning and reapplying changes (A, B) is more work and still requires resolving the same conflicts. Comparing commits in a visualizer (C) only helps inspect differences and does not resolve anything by itself."
+  },
+  "dva-0144": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B. Pre-signed URLs are the standard way to give a paying user time-limited access to a private S3 object; an MFA bucket-policy condition (C) applies to IAM principals, and website subscribers are not IAM users.",
+    "aiExplanation": "The bucket stays private, and when the application has verified that the visitor is a paid subscriber it generates an S3 pre-signed URL for that object with a short expiration. The URL carries the application's own permissions, so only someone the application approved can download the file, and it stops working after it expires. The concern that a subscriber could share the link is handled by keeping the expiry short; it is not solved by any other option. An aws:MultiFactorAuthPresent condition (C) only applies to requests signed with IAM credentials, which website subscribers do not have, so it would simply block everyone. Allowing anonymous access (A) exposes the content to everyone, and server-side encryption (D) protects data at rest but does not control who can download it."
+  },
+  "dva-0147": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B. NoEcho is a CloudFormation template parameter attribute, not a property of an SSM parameter, so option D describes something that does not exist; storing the credentials as a SecureString from the existing custom-resource Lambda is the secure, low-effort choice.",
+    "aiExplanation": "The custom resource's Lambda function already receives the new API credentials, so having it call ssm:PutParameter with Type SecureString stores them encrypted with AWS KMS in Systems Manager Parameter Store, with IAM controlling who can decrypt them, and requires no extra infrastructure. Option D is wrong because PutParameter has no NoEcho setting; NoEcho only masks CloudFormation template parameters in the console and API output. Option C would place the secret value in a CloudFormation resource property, and NoEcho cannot be set on resources, so the value could appear in the template or stack events. Option A is invalid because GenerateSecretString is a property of AWS::SecretsManager::Secret that creates a random string, not a resource that can store credentials returned by an external API. The stored explanation also wrongly says option D uses Secrets Manager."
+  },
+  "dva-0153": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "I believe C and E. Secrets Manager's limit is 64 KB, not 10 KB as the explanation claims, so A is technically possible, but an S3 object shared across accounts with a bucket policy is cheaper than a secret for a public CA certificate that is not confidential.",
+    "aiExplanation": "A root CA certificate chain is public data, so it does not need a secrets store: put the 10 KB file in an Amazon S3 bucket and add a bucket policy that grants the Lambda execution roles in the dev, test and prod accounts s3:GetObject (C). S3 storage and GET requests cost a tiny fraction of a Secrets Manager secret, which is billed per secret per month plus API calls and also needs a customer managed KMS key for cross-account access. The Lambda code then loads the certificate and updates the trust store during initialization, outside the handler (E), so the cost is paid once per execution environment and a cert change only needs new environments, not a redeploy. Parameter Store (B) cannot hold it because standard parameters are limited to 4 KB and advanced to 8 KB. Loading it inside the handler (D) would fetch the cert on every invocation. Option A also wrongly grants access to IAM users instead of the Lambda roles."
+  },
+  "dva-0159": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "A and B are both plausible; A fits better because a Step Functions Standard workflow can catch rate-limit errors and use Wait states that pause for minutes or days, while Lambda polling SQS cannot be rate-limited per minute and per day without custom code.",
+    "aiExplanation": "The process now has to pause whenever the third-party per-minute or per-day quota is hit and resume later, possibly days later. An AWS Step Functions Standard workflow can run for up to a year, catch the API error (or read the limit headers returned by the Lambda function), and use a Wait state to delay the next Lambda invocation until the quota resets, all without paying for idle compute. Putting calls in an SQS queue (B) does not by itself cap the call rate, because the Lambda event source mapping polls as fast as it can and offers no per-minute or per-day throttle. A CloudWatch alarm cannot stop a running Lambda invocation (C), and Kinesis Data Firehose (D) batches data delivery and does nothing to pace API calls. The stored explanation is just a forum comment."
+  },
+  "dva-0165": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "Choice A looks more secure. Choice B uses a bucket policy with Principal '*', which makes the code objects publicly readable to anyone, not just the deploying accounts.",
+    "aiExplanation": "Granting the CloudFormation service role S3 GetObject (and ListBucket if needed) and adding a bucket policy whose principal lists only the specific deployment account IDs limits access to exactly the accounts that need the code. A bucket policy with Principal '*' and GetObject makes every object readable by anyone on the internet unless Block Public Access stops it, which is clearly not the most secure option. Options C and D refer to a 'service-based link' for Lambda, which is not a real mechanism for this, and D also uses a wildcard resource. ListBucket is a minor extra permission compared to opening the bucket publicly."
+  },
+  "dva-0227": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "Choice A looks correct. S3 presigned URLs created with IAM user credentials and Signature Version 4 can last up to 7 days, so the stored claim of a 12-hour maximum is wrong (12 hours is the console limit), and Amazon WorkDocs has been discontinued.",
+    "aiExplanation": "An S3 presigned URL grants time-limited access to specific objects without giving out any AWS credentials. When signed with IAM user credentials using Signature Version 4, the expiration can be set up to 7 days, which matches the 7-day workshop exactly. Amazon WorkDocs reached end of support in 2025 and moving files there adds a separate service and sharing links that are harder to control. Creating IAM users and sharing their access keys hands out long-term credentials, and sharing a role ARN does not let external users assume it without trust policy changes and their own AWS accounts."
+  },
+  "dva-0235": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The four policy choices are images that are missing from this question, so the answer cannot be checked from the text; look up the original policies.",
+    "aiExplanation": "The answer should be the policy that grants s3:ListBucket on the bucket ARN arn:aws:s3:::DOC-EXAMPLE-BUCKET and s3:GetObject on the object ARN arn:aws:s3:::DOC-EXAMPLE-BUCKET/*, with nothing else. ListBucket is a bucket-level action and must use the bucket ARN, while GetObject is an object-level action and must use the /* object ARN. Policies that use s3:* or s3:Get*, grant PutObject or DeleteObject, or put the actions on the wrong resource ARN either grant too much or do not work. Because the choice text is missing here, the keyed answer A cannot be verified."
+  },
+  "dva-0242": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "Choice A looks correct. AWS SAM gradual deployments require AutoPublishAlias, and PreTraffic and PostTraffic hooks must point to validation Lambda functions, not to the alias; the question never asks for hooks.",
+    "aiExplanation": "Canary10Percent10Minutes shifts 10 percent of traffic to the new version for 10 minutes and then shifts the remaining 90 percent at once, which matches the requirement exactly. In AWS SAM, DeploymentPreference only works when AutoPublishAlias is set, because SAM publishes a new version and CodeDeploy shifts the alias between versions. Linear10PercentEvery10Minutes would take about 100 minutes to reach full traffic, so B and D are wrong. Option C sets the Hooks PreTraffic and PostTraffic to the alias, but those properties take the names of separate test Lambda functions, and without AutoPublishAlias there is nothing to shift."
+  },
+  "dva-0267": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "Choice A looks better. Limiting the function to 1 concurrent execution does not stop duplicates: standard queues deliver at least once and a message that exceeds the visibility timeout is still redelivered, while a FIFO queue with deduplication provides exactly-once processing. Neither option fixes the visibility timeout, so check your exam's preferred answer.",
+    "aiExplanation": "Standard SQS queues guarantee at-least-once delivery, so duplicates can occur even with a single consumer, and messages that are processed longer than the visibility timeout reappear and are processed again. An SQS FIFO queue with message deduplication IDs gives exactly-once processing and the extra request cost is small, so it is the most direct fix among the options (in practice you create a new FIFO queue, since an existing queue cannot be converted). Setting Lambda concurrency to 1 severely limits throughput and still allows redelivery after a visibility timeout, and SQS event source mappings require a maximum concurrency of at least 2. A dead-letter queue only captures failed messages, and Kinesis Data Streams also delivers at least once. The best real-world fixes are a visibility timeout of at least six times the function timeout plus idempotent processing."
+  },
+  "dva-0280": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "high",
+    "note": "Choice C looks correct. A CloudFront default root object only applies to the root URL (/), not to subdirectories like /products/, so choice A does not solve the problem.",
+    "aiExplanation": "CloudFront's default root object setting only maps requests for the distribution root to index.html; it does not apply to subdirectory paths. A CloudFront Function on the viewer request event can rewrite URIs ending in a slash (or with no file extension) to append index.html, and OAC keeps the S3 bucket private. Using the S3 static website endpoint requires a public bucket policy because website endpoints do not support OAC, which breaks the requirement. A custom 404 error response returning /index.html would serve the root page for every missing path instead of each directory's own index page."
+  },
+  "dva-0299": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key (C) is defensible but option A, a separate approval stage plus a notification rule, is also commonly accepted; the provided explanation is garbled and contradicts itself.",
+    "aiExplanation": "A CodePipeline manual approval action has a built-in field for an SNS topic ARN, so adding the approval action to the pipeline and specifying the topic notifies the product owner and pauses the pipeline until approval, with no extra configuration. Option C does this in the fewest steps, and setting the approval action's run order ahead of the deploy action in the production stage makes deployment wait for approval. Option A also works but adds a separate stage and a separate notification rule, which duplicates what the approval action already does. A Step Functions workflow is custom work, and a notification rule alone (option D) sends messages but never blocks the deployment."
+  },
+  "dva-0302": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "Likely A, not C: CloudWatch Logs Insights can query REPORT lines across all Lambda log groups and sort by @duration to find slow invocations; X-Ray Insights detects anomalies in fault rates, and there were no failed requests.",
+    "aiExplanation": "Every Lambda invocation writes a REPORT line with its duration to CloudWatch Logs, and CloudWatch Logs Insights can query many log groups at once, filter on @type = \"REPORT\" and sort by @duration descending. That finds the slowest executions across all functions immediately with no new setup. X-Ray Insights generate notifications from anomalies in fault and error rates, so with no failed requests they would not flag the slow calls, and X-Ray also needs enabling and time to collect data. CloudTrail Insights detects unusual API call volumes, not function duration. The Glue pipeline is heavy custom work for something Logs Insights does directly."
+  },
+  "dva-0305": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key (C, dead-letter queue) is the usual exam answer, but a DLQ only keeps the failed messages; the actual error reasons are in the function's CloudWatch Logs, so option B is also arguable.",
+    "aiExplanation": "A dead-letter queue configured on the SQS source queue (via a redrive policy with maxReceiveCount) captures messages that the Lambda function repeatedly fails to process, so the developer can inspect exactly which payloads fail and replay them later, with no code. Combined with the function's CloudWatch Logs, which Lambda writes automatically, this is the lowest-overhead way to find the cause. Raising the Lambda timeout to 15 minutes and checking CloudTrail does not help, because CloudTrail does not log function errors. A DynamoDB table requires custom code. Increasing the visibility timeout is good practice for timeouts but does not by itself capture failed messages."
+  },
+  "dva-0354": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "high",
+    "note": "Likely C, not D: the Lambda console cannot run a function on a local machine; AWS SAM CLI (sam local generate-event s3 put and sam local invoke) is the tool for local testing with a generated S3 event.",
+    "aiExplanation": "The AWS SAM CLI runs Lambda functions locally in a Docker container that emulates the Lambda runtime. sam local generate-event s3 put creates a realistic S3 put event JSON, and sam local invoke -e event.json runs the function locally with it, which is exactly local testing before publishing (sam local start-lambda is not strictly needed but does no harm). Option D describes console test events, which only run functions deployed in AWS, not on a local machine. Option B's aws lambda invoke calls the deployed cloud function. Option A uploads a real object, and S3 cannot invoke a function on a developer's machine."
+  },
+  "dva-0380": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "B may fit better than A: a weighted alias sends only 10% of traffic to the new version, so errors affect fewer users and rollback is just resetting the weight; A exposes 100% of users before you can roll back.",
+    "aiExplanation": "Lambda aliases support weighted routing, so an alias can keep 90% of traffic on the current version and send 10% to the new version. If errors appear, setting the weight back to 0% for the new version rolls back instantly, and only a tenth of users ever saw the problem, which minimizes impact. Option A also allows rollback by repointing the alias, but every user hits the new version first. Option C needs an application change to roll back, and option D is invalid because an alias cannot point to another alias."
+  },
+  "dva-0405": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "Likely A, not B: IAM database authentication uses short-lived (15-minute) auth tokens from the application's IAM role, so no long-term credentials exist; Secrets Manager still stores a long-term database password, even if rotated.",
+    "aiExplanation": "With IAM database authentication enabled on RDS for MySQL, the application uses its IAM role to call generate-db-auth-token, getting an authentication token that is valid for 15 minutes, and connects with it over SSL. There is no stored database password at all, and the role's own credentials are temporary. Storing the MySQL username and password in Secrets Manager or Parameter Store protects them, but they are still long-term credentials (rotation shortens their life but does not remove them). Environment variables are the weakest option, holding a plain long-term password."
+  },
+  "dva-0417": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "high",
+    "note": "Likely D, not B: Lambda .zip packages are limited to 250 MB unzipped even when uploaded from S3, so a 500 MB dependency needs a container image (up to 10 GB) pushed to Amazon ECR.",
+    "aiExplanation": "Lambda deployment packages in .zip format have a hard limit of 250 MB unzipped (including layers), whether the .zip is uploaded directly (50 MB zipped limit) or referenced from Amazon S3. A 500 MB dependency exceeds that, so the code must be packaged as a container image, which can be up to 10 GB. Lambda pulls container images only from Amazon ECR, so the image is pushed to an ECR repository and the function is created from it. Option C fails because Lambda cannot run an image stored in S3. The 512 MB figure in the provided explanation is the default /tmp size, not the package limit."
+  },
+  "dva-0418": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "high",
+    "note": "Likely C, not A: a private REST API is reachable only from inside a VPC through an interface endpoint, so a public single-page app in users' browsers could not call it; a regular (edge or Regional) REST API with an HTTP integration is required.",
+    "aiExplanation": "A regular REST API with an HTTP integration to the third-party API lets API Gateway add the company's API key as a static header in the integration request, so the key stays on the server side and never reaches the browser. It avoids paying for Lambda invocations, which makes it the cheapest secure option. Private REST APIs (options A and B) can only be called from within a VPC through an execute-api interface endpoint, so users on the public internet could not reach them. Option D works but adds Lambda cost and code for something an HTTP integration does natively."
+  },
+  "dva-0426": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "Two valid patterns exist. Since late 2023 Kinesis Data Streams supports resource-based policies, so A+E (identity policy in Account A plus a stream resource policy in Account B) works; older answer keys use B+C (a role in Account B that the instance profile role assumes).",
+    "aiExplanation": "The application needs permission on both sides of the account boundary. With the newer Kinesis resource-based policy feature, you grant the Account A instance profile role kinesis read actions in its own IAM policy and add a resource-based policy on the stream in Account B that names that role as principal, which is option A plus E. The classic alternative is to create a role with stream read permissions in Account B whose trust policy lets the Account A instance profile role assume it, which is option B plus C, but C's wording is muddled and it also needs sts:AssumeRole on the Account A role. Option D is wrong because trust policies only control who can assume a role, not data access. Expect older exam banks to key B and C."
+  },
+  "dva-0431": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "I lean to D. Option B claims a bucket policy can 'invoke' a Lambda function, which is not how S3 works: bucket policies control access to the bucket, while invocations come from event notification configuration plus the Lambda resource policy.",
+    "aiExplanation": "S3 invokes Lambda through the bucket's event notification configuration, and the function's resource-based policy decides which sources may invoke it. Separating development and production into their own accounts and restricting each function's resource policy to S3 events from its own account (aws:SourceAccount or SourceArn) guarantees development uploads can never trigger the production function. Option B describes bucket policies invoking functions, which they cannot do; the realistic fix within one account would be correcting the notification configuration and adding a SourceArn condition, which is not offered. Options A and C change the execution role, which controls what the function can read, not who can invoke it. Some answer keys pick B as the intended 'fix the per-bucket mapping' answer, so treat this one as debatable."
+  },
+  "dva-0441": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images or code in the original), so the key cannot be checked here. Look up the original question to see the choice text.",
+    "aiExplanation": "The correct policy for this classic question uses fine-grained access control conditions on dynamodb:PutItem. It should include a ForAllValues:StringEquals condition on dynamodb:LeadingKeys equal to the federated user's ID variable (for example ${www.amazon.com:user_id} or ${cognito-identity.amazonaws.com:sub}), so users can only touch their own item. It should also restrict dynamodb:Attributes to user_id and user_name and set dynamodb:Select to SPECIFIC_ATTRIBUTES, so only the name can be written. Choices that omit the LeadingKeys condition or that allow user_score or user_rank to be written are wrong."
+  },
+  "dva-0450": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "I believe A and D. AWS troubleshooting guidance for HEALTH_CONSTRAINTS lists a stopped CodeDeploy agent and an instance profile missing permissions (for example to read the revision from S3) as common causes; 'CodeDeploy health checks' in option E is not a real configuration.",
+    "aiExplanation": "HEALTH_CONSTRAINTS means too many instances failed, so the deployment fell below the minimum healthy hosts setting. Instance-level failures typically happen when the CodeDeploy agent is not installed or not running, so the instance never reports success, or when the EC2 instance profile lacks permissions to download the revision from S3 or other required resources. The CloudWatch agent is unrelated to CodeDeploy success. The developer's own IAM permissions would fail the deployment before it reached instances, not cause health constraint failures. CodeDeploy has no separate 'health check' setup on instances; health is derived from lifecycle event results, so E is not a real cause. The explanation given is only a link."
+  },
+  "dva-0451": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B. AWS KMS customer managed keys support automatic key rotation (yearly by default) with no code, while Systems Manager Parameter Store has no built-in automatic rotation at all; the explanation is a pasted chatbot answer that gets this wrong.",
+    "aiExplanation": "Lambda encrypts environment variables with AWS KMS, and you can choose a customer managed key. Customer managed keys support automatic rotation that you simply turn on, and the default period is every 365 days, which meets the yearly requirement with no development. Secrets Manager rotation rotates secret values with a Lambda rotation function, not the encryption keys, and Secrets Manager is not the mechanism that encrypts Lambda environment variables. AWS managed keys are already rotated automatically by AWS and cannot be rotated with your own Lambda function, so C is wrong. Parameter Store has no automatic rotation feature, so D is wrong."
+  },
+  "dva-0452": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images or code in the original), so the key cannot be checked here. Look up the original question to see the choice text.",
+    "aiExplanation": "The correct Logs Insights query filters to the Lambda REPORT lines, for example filter @type = \"REPORT\", and then aggregates the duration field. It should be something like stats avg(@duration), max(@duration), min(@duration) by bin(1m). Choices that use a different filter, the wrong field, or a bin size other than 1 minute are wrong. The given explanation describes choice A that way, but the choices are not visible to confirm."
+  },
+  "dva-0463": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe C. The explanation's claim that AWS RAM cannot share Parameter Store parameters is outdated: since February 2024, advanced-tier parameters can be shared across accounts with AWS RAM, which is the least-overhead option in an organization.",
+    "aiExplanation": "AWS Resource Access Manager can share Systems Manager Parameter Store advanced-tier parameters with other accounts or the whole organization, and the consuming account reads them by full ARN without copying them. This avoids managing cross-account role assumption in application code. Option B (an assumable role in Account A) also works but needs a trust policy, an sts:AssumeRole grant in Account B, and code to assume the role, which is more overhead. IAM user credentials (A) are long-term secrets and bad practice. Copying values to S3 (D) duplicates the data. Note that standard-tier parameters cannot be shared, so older keys that predate the feature pick B."
+  },
+  "dva-0477": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c",
+      "d",
+      "e"
+    ],
+    "confidence": "low",
+    "note": "The question says 'Choose two' but expects three answers. VPC Flow Logs and network ACLs are the core answers; the third (AWS Config rules versus AWS CloudTrail) is arguable.",
+    "aiExplanation": "VPC Flow Logs show whether traffic between the application and database subnets was accepted or rejected, which pinpoints where a connection fails. Network ACLs (along with security groups) are the components most likely to be blocking the traffic, so inspecting them identifies the faulty piece. AWS Config rules can flag security group or NACL configurations that do not comply, which is why the key includes them as a third choice. CloudTrail could show who changed a security group or NACL, but it does not show traffic flow. Trusted Advisor gives general best-practice checks and does not diagnose a specific connectivity fault."
+  },
+  "dva-0481": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images or code in the original), so the key cannot be checked here. Look up the original question to see the choice text.",
+    "aiExplanation": "For a mock integration, the integration request mapping template must output a JSON object with a statusCode field, and the integration responses then map that status to method responses. A template that uses Velocity conditionals, for example #if( $input.params('scope') == 'internal' ) {\"statusCode\": 200} #else {\"statusCode\": 500} #end, returns different status codes based on request conditions. Choices that put statusCode in a response template, or that return a body without a statusCode field, are wrong. The given explanation is only a documentation link, so the keyed letter cannot be confirmed here."
+  },
+  "dva-0486": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "The keyed answer B is the expected exam answer, but the explanation wrongly implies layers update automatically: each function pins a specific layer version and must be updated to pick up a new one.",
+    "aiExplanation": "Lambda layers are the standard way to share a common library across functions: you publish the library as a layer and attach it, which avoids bundling it in every deployment package. When the library changes you publish a new layer version and update the functions to reference it, which is easy to automate in a pipeline. Storing code in S3 (A) is just how deployment packages are uploaded and does not share a dependency. EFS (C) could give live updates, but it requires VPC configuration and loads code over the network, adding latency and overhead. Invoking a separate function for library calls (D) adds latency and cost."
+  },
+  "dva-0488": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "low",
+    "note": "I lean to B. The logs are exposed through an HTTP endpoint, which the CloudWatch agent cannot read (it tails local files), and AWS CloudTrail Lake is designed to ingest and query audit events from non-AWS sources; many keys pick D, so this is debatable.",
+    "aiExplanation": "CloudTrail Lake accepts audit events from outside AWS through integrations and the PutAuditEvents API, stores them in immutable event data stores with long retention, and lets you query them with SQL, which matches 'large volumes of audit data' plus queries. A scheduled EventBridge rule invoking a small Lambda function that pulls from the HTTP endpoint and pushes to CloudTrail Lake is fully automated and serverless. The CloudWatch agent (D) works by tailing log files on disk, so it does not fit logs served over HTTP, though it would be the right choice if the logs were files. DataSync (C) moves files from storage systems, not HTTP APIs. Exporting to RDS (A) is manual and not built for log analytics."
+  },
+  "dva-0501": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images or code in the original), so the key cannot be checked here. Look up the original question to see the choice text.",
+    "aiExplanation": "The correct policy allows only read actions on the DailyOrders table ARN, for example dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query, dynamodb:Scan and dynamodb:DescribeTable, with Resource set to arn:aws:dynamodb:region:account:table/DailyOrders (and its indexes if needed). Choices that use dynamodb:* or include PutItem, UpdateItem, DeleteItem or BatchWriteItem are wrong. An Allow on read actions is enough because IAM denies everything else by default, so a separate explicit Deny is optional. The given explanation only says 'must not be able to write', so the keyed letter cannot be confirmed here."
+  },
+  "dva-0504": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "I believe A. A staging environment that serves both the production version and the updated version is exactly what a Lambda alias with weighted routing provides; CodeDeploy linear shifting is a deployment process that moves traffic over time, not a standing environment.",
+    "aiExplanation": "Lambda aliases are pointers to versions, and an alias can route a percentage of invocations to a second version. Creating a staging alias that references the production version and the updated version gives a stable staging endpoint that invokes both, matching the existing pattern of one alias per environment. CodeDeploy linear deployments (C) shift an existing alias from one version to another in increments and finish when the shift is complete, so they do not create a separate staging environment. Lambda functions cannot be registered behind a Network Load Balancer (B). Tags (D) are metadata and do not route traffic."
+  },
+  "dva-0534": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The keyed answer B relies on SQS 'SendMessageIn' and 'SendMessageOut' APIs that do not exist, and SQS cannot send SMS. D (SNS FIFO) is the intended ordering-plus-deduplication answer, but note that SNS FIFO topics actually only deliver to SQS queues, not SMS, so the question itself is flawed.",
+    "aiExplanation": "The requirements of ordered delivery with no duplicates point to the FIFO variants of SNS or SQS, which provide strict ordering per message group and deduplication within a five-minute window. Option D describes publishing to an SNS FIFO topic, which is the service meant for sending notifications, so it is the intended answer. In reality SNS FIFO topics only support SQS FIFO subscribers, so a real design would publish to SNS FIFO and an SQS FIFO queue, then have a consumer send SMS through Amazon SNS or AWS End User Messaging. Option B invents SQS APIs and SQS cannot deliver SMS. Firehose and EventBridge Pipes cannot target phone numbers."
+  },
+  "dva-0535": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "RDS Proxy is the intended answer for unpredictable connection surges, but a proxy is only reachable from inside the VPC, so the function must also be attached to the VPC. Option A alone does not give network access.",
+    "aiExplanation": "Lambda functions can open many database connections during traffic surges, and Amazon RDS Proxy pools and shares connections so Aurora is not overwhelmed, which is why it is the keyed answer. However, RDS Proxy endpoints are private to the VPC, so in practice the function must also be configured for VPC access with a security group that the proxy's security group allows. A NAT gateway (B) is for outbound internet traffic and cannot be attached to a function. Making the database public (C) is insecure, and its security group rule is in the wrong direction. Option D gives network reach but does nothing about connection surges. The given explanation is gibberish."
+  },
+  "dva-0536": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "high",
+    "note": "I believe D, and this same question is keyed D elsewhere (dva-0500). The ACM Approaching Expiration event can only be configured to fire up to 45 days before expiry, so it cannot give 90 days' notice, while the Config rule acm-certificate-expiration-check accepts daysToExpiration = 90.",
+    "aiExplanation": "The AWS Config managed rule acm-certificate-expiration-check has a daysToExpiration parameter that can be set to 90, and it evaluates imported certificates as well as ACM-issued ones. An EventBridge rule matching Config Rules Compliance Change events for that rule can send the alert to the existing SNS topic, which emails the security team. The ACM Certificate Approaching Expiration event (A) does cover imported certificates, but its lead time (DaysBeforeExpiry) is limited to at most 45 days, so it cannot meet the 90-day requirement. Options B and C put messages on an SQS queue that nobody is notified from, and CloudTrail does not emit expiration notifications."
+  },
+  "dva-0539": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "X-Ray active tracing is the keyed answer for measuring notification rate and latency, but check whether active tracing applies to SNS FIFO topics. None of the other options measures latency.",
+    "aiExplanation": "AWS X-Ray active tracing on Amazon SNS records segments for publish and delivery, so you can see how many notifications flow through and how long each hop takes in the trace map, with little setup. The NumberOfNotificationsFailed metric only counts failures and says nothing about rate or latency. CloudTrail logs management API calls, not per-message delivery timing. GuardDuty runtime monitoring is a threat detection feature. Because SNS FIFO topics only deliver to SQS FIFO queues and some features are limited for FIFO, confirm X-Ray support in the current SNS documentation."
+  },
+  "dva-0541": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing (they were images or code in the original), so the key cannot be checked here. Look up the original question to see the choice text.",
+    "aiExplanation": "The correct trust policy statement allows the states.amazonaws.com service principal to call sts:AssumeRole with a Condition that pins the caller. For example ArnLike or ArnEquals on aws:SourceArn equal to arn:aws:states:region:account-id:stateMachine:myStateMachine, often combined with aws:SourceAccount. Choices that only check the account, use a broad wildcard, or use a negated condition do not restrict the role to myStateMachine. The given explanation describes choice A as the exact-ARN condition."
+  },
+  "dva-0544": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "A full solution for sign-up, sign-in and direct access to AWS resources uses both a Cognito user pool and an identity pool. The key picks the user pool (D) because only it provides sign-up and sign-in; option C provides AWS credentials but no sign-up.",
+    "aiExplanation": "A Cognito user pool is a user directory that provides sign-up, sign-in, password policies, MFA and account recovery, and an app client lets the mobile app use it, so it covers the authentication requirements. Backend resources can then be secured, for example with API Gateway using a Cognito authorizer, or by exchanging user pool tokens through an identity pool for temporary AWS credentials. Option C, an identity pool alone, issues IAM credentials but provides no sign-up or sign-in experience. IAM Access Analyzer (A) and attaching a role to an API endpoint (B) do not authenticate end users. Read 'access secured backend AWS resources' as using the user pool tokens, possibly together with an identity pool."
+  },
+  "dva-0554": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The question says 'CloudWatch Logs Insights' but the answer describes CloudWatch Lambda Insights, a different feature. The key (C) is right for Lambda Insights.",
+    "aiExplanation": "CloudWatch Lambda Insights collects enhanced performance metrics and logs for Lambda functions through the Lambda Insights extension layer. To enable it in a SAM template, you add the LambdaInsightsExtension layer ARN to each function and attach the CloudWatchLambdaInsightsExecutionRolePolicy managed policy. Setting Tracing to Active (D) turns on X-Ray, not Lambda Insights. Outputs and parameters (A, B) do not enable any monitoring. CloudWatch Logs Insights itself needs no activation, since it can query any log group, which is why the question wording is confusing."
+  },
+  "saa-0041": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B (Amazon AppFlow) is correct. AppFlow is the managed service built for pulling data from SaaS sources into S3, so it removes the slow EC2 tier entirely instead of just adding more instances.",
+    "aiExplanation": "Amazon AppFlow is a fully managed integration service that transfers data from SaaS applications such as Salesforce, Zendesk or ServiceNow directly into Amazon S3, so the company no longer has to run or scale EC2 instances for ingestion. An S3 event notification to an SNS topic then handles the completion notice without any custom code on a server. Option A keeps the EC2 fleet and only scales it out, so the company still patches, sizes and monitors instances, which is more ongoing overhead. Option C misuses EventBridge, which cannot act as a generic SaaS data puller into S3. Option D just repackages the same workload into containers and Container Insights does not emit S3 upload events."
+  },
+  "saa-0070": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key C is the standard answer, but the explanation's claim that NLB cannot check a URL is false: NLB target groups support HTTP/HTTPS health checks with a path. A could also work if the Auto Scaling group used ELB health checks, so read this as 'ALB plus ELB health checks replaces bad instances'.",
+    "aiExplanation": "Replacing the Network Load Balancer with an Application Load Balancer gives Layer 7 awareness, and an HTTP health check against the application URL will mark instances returning errors as unhealthy. When the Auto Scaling group is set to use ELB health checks, it automatically terminates and replaces those unhealthy instances, so no manual restarts or custom scripts are needed. Option A is close, because NLB target groups do support HTTP health checks with a path, but the option never makes the Auto Scaling group act on them, so instances would just be taken out of rotation. Option B requires a custom cron script, which the question forbids. Option D's UnhealthyHostCount alarm cannot identify which instance to replace."
+  },
+  "saa-0082": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "low",
+    "note": "I believe B is correct (the key's own explanation also argues for B). AWS Config has the managed rule acm-certificate-expiration-check with a configurable days parameter, which can feed EventBridge and SNS with no custom code; D needs a Lambda function and EventBridge has no generic 'expires in 30 days' rule pattern.",
+    "aiExplanation": "AWS Config provides a managed rule, acm-certificate-expiration-check, that flags any ACM certificate, including imported ones, expiring within a configurable number of days such as 30. When the rule marks a certificate noncompliant, an Amazon EventBridge rule on the Config compliance change event can publish to an SNS topic for the security team. Option A is wrong because ACM has no rule feature for scheduled custom messages. Option C is weak because Trusted Advisor's certificate check is not configurable to 30 days and needs a support plan for full checks. Option D adds a custom Lambda function; note that ACM does emit an 'approaching expiration' EventBridge event (default 45 days, adjustable), so D is not absurd, which is why this one is debatable."
+  },
+  "saa-0087": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "I believe D is correct. The requirement is to store customer data created while the database is unavailable during an upgrade; RDS Proxy only pools and holds connections during short failovers and cannot buffer writes through an upgrade outage, whereas an SQS queue durably stores the data until the database is back.",
+    "aiExplanation": "Writing customer data to an Amazon SQS queue decouples the API from the database, so records are durably stored even while Aurora is being upgraded and refusing connections. A separate Lambda function polls the queue and writes to the database once it is reachable, and failed writes simply return to the queue for retry. A FIFO queue preserves order and deduplicates. Option A, RDS Proxy, reduces failover time and pools connections, but during an engine upgrade the database itself is down, so the proxy cannot accept and persist the writes. Option B is limited by the 15-minute Lambda maximum and still loses data on longer outages. Option C fails because Lambda local storage is ephemeral and not shared between invocations."
+  },
+  "saa-0088": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "I believe A (Requester Pays) is correct. The question asks to keep the company's own data transfer costs as low as possible, and with Requester Pays the European firm's account pays for requests and data transfer out, while Cross-Region Replication makes the company pay inter-Region transfer for every object.",
+    "aiExplanation": "With S3 Requester Pays enabled, the requester's AWS account, here the European marketing firm, is charged for the request and data transfer costs when it downloads objects, and the bucket owner pays only for storage. The firm already has AWS accounts with S3 buckets, which satisfies the requirement that requesters be authenticated AWS principals. Option B, Cross-Region Replication, charges the source bucket owner for inter-Region data transfer on every replicated object, plus replication requests, so the company keeps paying as the 3 TB dataset grows. Option C grants access but the company still pays data transfer out. Option D adds sync transfer costs and Intelligent-Tiering only affects storage pricing."
+  },
+  "saa-0096": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "low",
+    "note": "The IAM policy this question refers to is missing from the text, so it cannot be answered from what is shown. The known version of this question allows ec2:TerminateInstances from source IP 10.100.100.0/24 and denies all ec2 actions outside us-east-1, which makes C correct.",
+    "aiExplanation": "In the original question the policy has an Allow statement for ec2:TerminateInstances with a condition on aws:SourceIp of 10.100.100.0/24, and a Deny statement for all EC2 actions when aws:RequestedRegion is not us-east-1. Together these mean a user can terminate instances only in us-east-1 and only when the call comes from an address in that range, such as 10.100.100.254, which is choice C. Choice A is wrong because the Deny blocks every Region except us-east-1. Choice B confuses the caller's source IP with the instance's IP address. Choice D is the opposite of what the Allow statement grants."
+  },
+  "saa-0102": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "b",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "After reconsidering I agree with B and E, but choice E's wording is loose: DataSync has no SFTP location type, so in practice you create an NFS location pointing at the server's NFS export. Choice A is not required because EFS is a Regional service with mount targets in each AZ.",
+    "aiExplanation": "AWS DataSync automates and accelerates moving file data from on premises into Amazon EFS. You deploy a DataSync agent in the on-premises data center (B), then create a source location for the on-premises file system, which in practice is the NFS share behind the SFTP server, and a destination location for the EFS file system (E), and run a task. Option A is unnecessary because EFS is Regional and reachable from any AZ that has a mount target, and it does nothing to automate the transfer. Option C is irrelevant because the data must land in EFS, not an EBS volume. Option D is a manual copy, which contradicts the requirement to automate."
+  },
+  "saa-0108": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "Neither the key A nor the fan-out option D is ideal. D is the textbook SNS-to-SQS fan-out pattern, but RDS event notifications only cover instance events such as failover or backups, not row changes, so they cannot detect a sold listing; A works but a single SQS queue does not fan out to several targets.",
+    "aiExplanation": "The trigger must fire when the listing data changes, and Amazon RDS event notifications do not report data changes, only operational events such as reboots, failovers and backups, so options C and D cannot detect a sale. That leaves a Lambda function invoked when the database is updated (for example, Aurora MySQL can invoke Lambda from a trigger or stored procedure, or the application can call it) that sends the sale data to an SQS queue for the targets to consume. A standard queue is enough because strict ordering is not required, which rules out the FIFO option B. In a real design you would have the Lambda function publish to SNS with one SQS queue per target system, since a single queue delivers each message to only one consumer."
+  },
+  "saa-0125": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a",
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "Choice d in this copy is garbled: it merges two different options. The intended correct option is 'two public subnets, two private subnets and two NAT gateways across two AZs with the ALB in the public subnets'; a single public subnet would not be highly available.",
+    "aiExplanation": "The EC2 instances and the RDS DB instance must stay off the public internet, so the Auto Scaling group and a Multi-AZ RDS instance go in private subnets (A). The instances still need outbound internet for the payment service, which needs NAT gateways in public subnets, one per AZ for high availability, and the internet-facing ALB must sit in public subnets in two AZs. That is the second half of the garbled choice d. Option B puts the ALB in private subnets, so customers could not reach it. Option C exposes the EC2 instances in public subnets. The first half of choice d has only one public subnet, which an ALB does not support across two AZs."
+  },
+  "saa-0128": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B (Spot Instances in an EKS managed node group) is correct. Managed node groups natively handle Spot interruption notices, draining and rebalancing for containers, while a plain EC2 Auto Scaling group leaves you to build your own container orchestration.",
+    "aiExplanation": "The workload is containerized, stateless and tolerant of disruption, so Spot Instances give the lowest compute cost. An Amazon EKS managed node group with the Spot capacity type provisions and lifecycle-manages the nodes, uses Capacity Rebalancing, and automatically cordons and drains pods when a Spot interruption notice arrives, which keeps operational overhead low. Option A also uses Spot, but running containers directly on an EC2 Auto Scaling group means you must install and operate a container runtime, scheduling and interruption handling yourself. Options C and D use On-Demand Instances, which cost much more than Spot for an interruption-tolerant workload. The small EKS control plane fee is outweighed by the reduced management effort."
+  },
+  "saa-0134": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "Key C is defensible but debatable: it assumes the data already in the existing bucket can be replicated with CRR (existing objects actually need S3 Batch Replication), and some sources prefer A's new bucket with multi-Region KMS keys.",
+    "aiExplanation": "Keeping the data in the existing S3 bucket, encrypting with SSE-S3, enabling S3 Cross-Region Replication and querying with Amazon Athena is the lowest-overhead serverless design. SSE-S3 keys are fully managed by S3 and CRR replicates SSE-S3 objects with no extra KMS permissions or key policies. Athena is serverless and queries data in place in S3 with standard SQL. Options A and B add a new bucket and SSE-KMS multi-Region keys, which mean more key management and replication configuration. Options B and D use Amazon RDS, which is not serverless and would require loading the data into a database. Note that CRR only replicates objects written after the rule is enabled, so existing objects would need S3 Batch Replication."
+  },
+  "saa-0159": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "c"
+    ],
+    "confidence": "high",
+    "note": "I believe A and C. Option E (an IAM role per user) is impractical for a publicly accessible API used by anonymous genuine users, and the key's own explanation actually argues for A and C.",
+    "aiExplanation": "AWS WAF attached to the API Gateway stage can block botnet traffic using rate-based rules, IP reputation lists and the Bot Control managed rule group, so C is clearly correct. A usage plan with API keys distributed only to genuine users lets API Gateway reject requests that do not carry a valid key and also lets you throttle per key, which blocks unauthorized callers. Creating an IAM role for every user (E) does not scale for a public application and would require every end user to have AWS credentials and SigV4-sign requests. Filtering IPs inside the Lambda function (B) still incurs invocations and cannot keep up with changing botnet IPs. Converting to a private API (D) would cut off legitimate public users entirely."
+  },
+  "saa-0165": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "high",
+    "note": "I believe D. CloudFront does not 'forward requests to AWS WAF'; WAF is associated with the distribution, and OAI/OAC is what forces all traffic through CloudFront so none can bypass the WAF inspection.",
+    "aiExplanation": "To ensure every request is inspected, attach an AWS WAF web ACL to the CloudFront distribution and lock the S3 bucket so it can only be read through CloudFront using an origin access identity (or the newer origin access control). Without restricting the bucket, users could hit the S3 endpoint directly and bypass WAF entirely. Option B describes a flow that does not exist; WAF is not a separate hop that CloudFront forwards to, it is evaluated inline once the web ACL is associated with the distribution. Option A is wrong because S3 bucket policies cannot reference a WAF ARN as a principal. Option C is wrong because S3 does not use security groups."
+  },
+  "saa-0167": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "Key C (Reserved baseline plus Spot burst) is the commonly accepted answer because SQS consumers tolerate interruption, but some argue D because Spot can be reclaimed and the question stresses no downtime.",
+    "aiExplanation": "Reserved Instances cover the steady baseline so the application always has capacity to keep processing, which satisfies the no-downtime requirement. The extra, intermittent load can run on Spot Instances because SQS-based workers are naturally interruption tolerant: if a Spot Instance is reclaimed, any in-flight message becomes visible again after its visibility timeout and is processed by another worker. Spot is much cheaper than On-Demand, which makes C more cost-effective than D. Option A risks losing all capacity at once if Spot capacity is reclaimed. Option B pays for peak capacity all the time even though traffic is intermittent."
+  },
+  "saa-0202": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B. A KMS customer managed key with automatic rotation is guaranteed to rotate yearly (one-click setting), whereas SSE-S3 rotation is internal to AWS and not documented as a configurable annual rotation; question 189 in this same set keys the KMS option for the identical requirement.",
+    "aiExplanation": "Creating an AWS KMS customer managed key, enabling automatic key rotation (which rotates the key material every year by default) and setting it as the bucket's default encryption meets both requirements with only a checkbox of setup. AWS rotates the key material automatically and keeps old versions so existing objects stay decryptable. SSE-S3 (A) does encrypt at rest, but you cannot configure or verify an annual rotation schedule for S3 managed keys, so it cannot be shown to meet an explicit yearly rotation requirement. Option C requires manual rotation, which is more overhead. Option D uses imported key material, and KMS automatic rotation is not supported for keys with imported material, so it would have to be rotated manually."
+  },
+  "saa-0213": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "I believe A. Cross-site scripting and SQL injection are Layer 7 exploits filtered by AWS WAF rules (for example the AWS managed core rule set and SQLi rule groups); Shield Advanced is a DDoS protection service.",
+    "aiExplanation": "AWS WAF is a fully managed web application firewall that attaches directly to an Application Load Balancer and uses rules, including AWS Managed Rules for SQL injection and cross-site scripting, to inspect and block malicious HTTP requests. Because it is managed, there are no servers to patch or scale, which matches the small operations team. AWS Shield Advanced (C) focuses on DDoS detection and mitigation; although it includes WAF usage at no extra cost, you still have to write WAF rules, so WAF is what actually filters XSS and SQLi. Option B is not possible for a dynamic app behind an ALB and S3 hosting does not filter attacks. Option D adds a self-managed firewall EC2 instance, which increases rather than reduces operational responsibility."
+  },
+  "saa-0239": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B. A Lambda function URL gives a built-in HTTPS endpoint with AWS_IAM auth for a single function, with nothing else to deploy or manage, which is more operationally efficient than an API Gateway REST API.",
+    "aiExplanation": "Lambda function URLs give a single function a dedicated HTTPS endpoint and support AuthType AWS_IAM, so callers must SigV4-sign requests with IAM credentials. That meets both requirements with one configuration setting and no additional service to deploy, version or monitor. An API Gateway REST API with IAM authorization (A) also works, but it adds resources, methods, stages and deployments to manage, so it is less operationally efficient when you do not need API Gateway features like usage plans or request transformation. Lambda@Edge (C) would require writing custom IAM verification logic and has runtime restrictions. CloudFront Functions (D) run only JavaScript, cannot run Go code, and have no AWS_IAM authentication type."
+  },
+  "saa-0247": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c",
+      "e"
+    ],
+    "confidence": "high",
+    "note": "I believe C and E. RDS for MySQL requires automatic backups (retention period greater than 0) before you can create a read replica, and binary logging is managed by RDS automatically, so there is no separate binlog setting to enable.",
+    "aiExplanation": "Amazon RDS for MySQL will not let you create a read replica unless automatic backups are enabled on the source, which you do by setting the backup retention period to a value other than 0. AWS also recommends letting long-running transactions complete before creating the replica, because the replica is created from a snapshot and must catch up, and open transactions can delay or break that process. Binary logging (A) is turned on by RDS automatically when backups are enabled, so it is not a separate step you perform. Failover priority (B) applies to Aurora replicas, not to setting up an RDS MySQL read replica. Global tables (D) are a DynamoDB feature."
+  },
+  "saa-0253": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "low",
+    "note": "The question refers to Policy1 and Policy2 but the policy documents are missing, so it cannot be answered from the text; C is the commonly cited answer based on the original exhibit.",
+    "aiExplanation": "In the original exam item, the two policies were shown as JSON exhibits. One policy allowed broad delete actions while the other contained an explicit Deny for actions such as deleting directories (AWS Directory Service), IAM users and CloudWatch Logs. Because an explicit Deny always overrides an Allow in IAM policy evaluation, the only delete action left permitted was ec2:TerminateInstances, so the engineer can delete EC2 instances. Without the exhibit you cannot verify this, so treat this item as unreliable and focus on the rule that explicit Deny wins over Allow."
+  },
+  "saa-0275": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "I believe A is correct. A scheduled action that raises desired capacity to 20 before opening pre-warms the fleet, and the existing dynamic policy can still scale in later; the key's claim that the group would be stuck at 20 all day is false.",
+    "aiExplanation": "The slowness happens because the group starts the day at 2 instances and dynamic scaling takes time to launch and warm up 18 more. A scheduled action that sets desired capacity to 20 shortly before office hours puts the capacity in place before staff arrive, and because minimum capacity is unchanged the dynamic scaling policy can still scale in if load is lower. Option C (target tracking at a lower CPU threshold) still reacts only after load arrives, so the morning lag remains, and target tracking uses instance warmup rather than a cooldown period anyway. Option B has the same reactive problem. Option D pins minimum and maximum at 20, which prevents scale-in during the day and raises cost."
+  },
+  "saa-0308": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b",
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe B and C are correct. The instances are actively used, high-performance and On-Demand for 90 days, so the RDS Reserved Instance Optimization check is the one that reduces cost; the Idle DB Instances check only flags instances with no connections for 7 days.",
+    "aiExplanation": "With consolidated billing, Trusted Advisor in the management (payer) account can show cost optimization checks across the linked accounts, so the finance team can review all RDS instances in one place. The instances are active and have been running steadily On-Demand for 90 days, which is exactly what the Amazon RDS Reserved Instance Optimization check looks at: it recommends RI purchases based on steady On-Demand usage. The Idle DB Instances check (D) only flags databases with no connections over the past 7 days, which does not describe busy, high-performance instances. Option A limits the view to one account at a time, and the Redshift Reserved Node check (E) is for a different service."
+  },
+  "saa-0342": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "Predictive scaling (C) fits the hint that the company cannot analyze capacity trends, but scheduled scaling (B) is also a strong answer for a fixed weekly job. Predictive scaling needs historical data and is tuned for recurring patterns, so check which reasoning your source expects.",
+    "aiExplanation": "Predictive scaling uses machine learning on historical CloudWatch data to forecast load and can pre-launch instances ahead of the forecast (the SchedulingBufferTime setting), which matches the requirement to have capacity 30 minutes before the jobs without anyone working out the right instance count. Scheduled scaling (B) would also launch capacity at the right time, but someone must decide the desired, minimum and maximum values, which is the analysis the company says it cannot do. A dynamic target tracking policy (A) only reacts once CPU rises, so capacity arrives late. The EventBridge and Lambda approach (D) is custom code that also reacts after the fact."
+  },
+  "saa-0369": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "I believe A (AWS Batch) is correct. Each task runs for 1 hour, but AWS Lambda has a hard 15-minute maximum timeout, so the keyed answer C cannot work.",
+    "aiExplanation": "AWS Batch runs containerized jobs in any language and scales compute automatically, so each team's task can be packaged as its own job, and Amazon EventBridge can schedule the job submissions. That removes the single-instance performance and scalability bottleneck with little operational work. AWS Lambda (C) is ruled out because its maximum execution time is 15 minutes and these tasks take about 1 hour. AWS App Runner (B) is designed for long-running web services and APIs, not scheduled batch jobs. An Auto Scaling group of copies of the instance (D) duplicates all tasks on every instance and does not split or schedule the work sensibly."
+  },
+  "saa-0394": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe C (io2) is the better answer; RDS does not let you attach or stripe your own EBS volumes, so splitting into two 1,000 GB gp3 volumes is not something you can configure. The explanation also wrongly claims RDS does not support io2.",
+    "aiExplanation": "Amazon RDS manages its own storage layout, so you cannot replace one volume with two volumes yourself; option D is not an RDS operation. When a workload needs sustained IOPS above what the current configuration delivers, the exam-standard fix is Provisioned IOPS SSD storage, and RDS supports io2 Block Express for MySQL. Note that RDS gp3 for volumes of 400 GB or more can also be provisioned above its 12,000 IOPS baseline, so option B is a defensible alternative today. A magnetic volume (A) is far slower and is a legacy option. Either way, D is the weakest choice because it describes something RDS does not let you do."
+  },
+  "saa-0419": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe A and C; EBS encryption by default is an account-level, per-Region setting turned on in the EC2 console, and there is no organization-wide default EBS encryption setting in the management account as option E describes.",
+    "aiExplanation": "EBS encryption by default is configured per account and per Region in the EC2 console (EBS encryption account attribute), and once enabled every new volume is encrypted automatically, so employees do not need to change how they create volumes (A). To make sure no IAM user or root user can create unencrypted volumes, an SCP attached to the root OU can deny ec2:CreateVolume when ec2:Encrypted is false; SCPs are the only one of these controls that also applies to member-account root users (C). Option E describes a management-account setting that applies to the whole organization, which is not how EBS default encryption works. Permission boundaries (B) attach to IAM users and roles, not OUs, and per-account IAM policies (D) do not restrict the root user."
+  },
+  "saa-0424": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B; Reserved Instances suit the 24/7 frontend and Spot Instances are the cheapest way to run short-lived, variable backend nodes, which is the standard pattern for this question.",
+    "aiExplanation": "The frontend runs 24/7 with steady usage, so Reserved Instances (or a Savings Plan) give the biggest discount for it. The backend nodes run only briefly and their number changes with workload, which is the classic use case for Spot Instances, offering up to 90 percent savings over On-Demand. Fargate (A, D) is billed at a premium per vCPU-hour compared with Spot EC2 and would require containerizing the application. Spot for the always-on frontend (C, D) risks interruptions on a tier that must stay up, and Reserved Instances for variable backend nodes (C) waste money when they sit idle."
+  },
+  "saa-0429": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The IAM policy exhibit is missing from this question, so you cannot verify the answer from the text alone. Option D is the widely accepted answer for the usual version of this question, which allows ec2:* in us-east-1 and denies StopInstances and TerminateInstances without MFA.",
+    "aiExplanation": "In the commonly published version of this question, the policy allows all EC2 actions with a condition limiting them to the us-east-1 Region, and a separate statement denies ec2:StopInstances and ec2:TerminateInstances when the request is not authenticated with MFA. IAM evaluates all statements together, so explicit denies always win over allows; statement order does not matter, which rules out A. Members can therefore do any EC2 action in us-east-1, but they can stop or terminate instances only when signed in with MFA. Option C is wrong because the Region condition keeps every permission inside us-east-1, and B is wrong because only two actions need MFA, not all of them."
+  },
+  "saa-0477": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The answer choices for this question are missing from the source, so you cannot check the keyed answer against the actual policy statements. Treat this question as unverifiable.",
+    "aiExplanation": "The usual version of this question has a policy that allows s3:ListBucket on the bucket ARN but lacks a working s3:DeleteObject permission on the objects. Deleting objects needs an Allow for s3:DeleteObject on the object ARN, written as arn:aws:s3:::bucket-name/* , because object-level actions apply to object resources rather than the bucket itself. The least-privilege fix is to add only that action on that resource, not s3:* or a wildcard resource. Since the choices are blank here, compare against the original source before relying on the keyed letter."
+  },
+  "saa-0479": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B (AWS CloudFormation); the key choosing Systems Manager looks wrong, and even the provided explanation says CloudFormation is the infrastructure-as-code service.",
+    "aiExplanation": "AWS CloudFormation is the infrastructure-as-code service: you describe the Auto Scaling group, Application Load Balancer and RDS database in a template based on the validated prototype, then deploy identical stacks for development and production across two Availability Zones automatically and repeatedly. AWS Systems Manager (A) manages and automates operations on existing resources but does not replicate a whole infrastructure stack. AWS Config (C) records and evaluates resource configurations and cannot deploy anything. Elastic Beanstalk (D) deploys applications into environments it creates and cannot point at a manually built prototype to clone it."
+  },
+  "saa-0482": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "I believe A; 100 GB over 100 Mbps takes only about 2 to 3 hours, and the aws s3 sync command already encrypts data in transit over HTTPS, so installing a DataSync agent adds needless overhead for a one-time copy.",
+    "aiExplanation": "The data set is small: 100 GB over a 100 Mbps link is roughly 8,000 seconds, a little over two hours. The AWS CLI aws s3 sync command sends data to S3 over HTTPS (TLS), so it meets the in-transit encryption requirement with nothing to deploy. AWS DataSync (B) also encrypts and works, but it requires deploying and activating an agent VM on premises and creating locations and tasks, which is more overhead for a one-time, small migration. Snowball (C) takes days to order and ship. An IPsec VPN (D) adds setup that is unnecessary because HTTPS already encrypts the traffic."
+  },
+  "saa-0506": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B (Aurora with cross-Region replicas, effectively Aurora Global Database); the requirement is a single primary database, and DynamoDB global tables are multi-active with every Region accepting writes, not a single primary.",
+    "aiExplanation": "The requirement calls for one primary reservation database with Regional deployments of the web tier and update latency under 1 second. Amazon Aurora MySQL with cross-Region replicas, which is what Aurora Global Database provides, keeps one writer Region and replicates to other Regions with typical lag under 1 second, and secondary Regions can serve local reads or forward writes to the primary. DynamoDB global tables (A) are multi-active with every Region accepting writes, which contradicts the single-primary requirement and needs an application rewrite. RDS for MySQL cross-Region read replicas (C) use asynchronous binlog replication with higher, less predictable lag. Option D builds custom Lambda synchronization between separate databases, which is fragile and not a single primary."
+  },
+  "saa-0514": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "b",
+      "c"
+    ],
+    "confidence": "low",
+    "note": "This one is genuinely debatable; I lean toward A, B, C because the Redshift Data API matches option A word for word, while option E (tens of millions of requests per minute, scaling globally) describes DynamoDB, not Redshift.",
+    "aiExplanation": "Amazon Redshift is a petabyte-scale data warehouse for analytics. It supports server-side encryption with KMS and works with client-side encrypted data (B), and it is well suited to running analytics workloads at set times, such as when the application is idle (C). The Redshift Data API lets traditional, containerized, serverless and event-driven applications run SQL against Redshift over HTTPS without managing connections, which is what option A describes. Option E uses the language of DynamoDB global tables; Redshift is a Regional service and is not built for tens of millions of requests per minute. Caching (D) is a job for ElastiCache, and Redshift does not offer secondary replicas of a cluster from the console (F)."
+  },
+  "saa-0537": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "high",
+    "note": "The key says B, but C (AWS Elastic Disaster Recovery as a pilot light) is the better answer. It meets a 30-second RPO and 60-minute RTO at a much lower cost than running a warm standby RDS for SQL Server around the clock.",
+    "aiExplanation": "AWS Elastic Disaster Recovery continuously replicates block-level disk changes from the on-premises VM into a low-cost staging area in AWS, so the RPO is typically seconds. Recovery instances only launch during a failover, and they usually come up within minutes, well inside the 60-minute RTO. Because only cheap replication servers and EBS snapshots run day to day, this is the cheapest option that meets both objectives. A warm standby RDS for SQL Server with DMS CDC also meets the targets, but you pay for a licensed RDS instance and a DMS replication instance at all times, which goes against minimizing cost. An active/active Always On setup needs SQL Server Enterprise licensing and is the most expensive option. Nightly backups give an RPO of up to 24 hours."
+  },
+  "saa-0538": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "Every option is flawed. Aurora is not Oracle-compatible, so D implies an engine migration, and Multi-AZ instance deployment is RDS wording rather than Aurora wording. C is technically impossible because RDS for Oracle does not support Multi-AZ DB clusters.",
+    "aiExplanation": "The keyed answer, Amazon Aurora with reader instances, gives high availability through storage replicated across three AZs and automatic failover, and it offloads reporting to Aurora Replicas that share the same storage volume. The catch is that Aurora supports only MySQL and PostgreSQL, so moving off Oracle needs AWS SCT and DMS for a schema conversion. Option C sounds like the more natural Oracle answer, but RDS Multi-AZ DB clusters with readable standbys exist only for MySQL and PostgreSQL, not Oracle. Option B runs a Single-AZ primary, so it is not highly available. Option A spreads instances across Regions without a defined replication or HA design. D is the least-bad choice, but the question is poorly written."
+  },
+  "saa-0541": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a",
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "Both D (a new payer account) and E (the existing account becomes the management account) technically let the Savings Plan be shared through consolidated billing. D is preferred only because AWS recommends that the management account not run workloads.",
+    "aiExplanation": "Savings Plan discounts can only be shared among accounts in the same AWS Organizations consolidated billing family, so the separately billed accounts first need to join one organization. Creating that organization from a new, dedicated payer account follows AWS best practice to keep workloads out of the management account. The account that owns the Savings Plan joins as a member, and its plan still applies across the organization. Next, discount sharing must be turned on in the billing preferences of the management account, because only the payer account controls sharing for the organization. AWS RAM cannot share Savings Plans, and a member account cannot turn on organization-wide sharing on its own. Option E would also work functionally, so treat this question as a best-practice judgment call."
+  },
+  "saa-0546": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "The key says D (Service Catalog), but B (OUs with service control policies) is the standard answer. SCPs actually block services at the account level, while Service Catalog only offers approved products and does not stop anyone from using other services.",
+    "aiExplanation": "Service control policies in AWS Organizations set the maximum permissions for every principal in an account, including the root user. Putting each department's account in its own OU and attaching an allow-list or deny-list SCP centrally controls which AWS services each account can use, and it needs very little ongoing effort. AWS Service Catalog publishes a portfolio of approved products, but users who have IAM permissions can still call other services directly, so it does not enforce the restriction. Systems Manager templates and CloudFormation provision resources but do not prevent other services from being used. SCPs are the purpose-built, lowest-overhead guardrail here."
+  },
+  "saa-0549": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "The key says C, but A (S3 Standard, then a lifecycle transition to S3 Glacier after 7 days) is cheaper and meets the 6-hour retrieval requirement. The explanation wrongly applies the 30-day minimum, which covers only Standard-IA and One Zone-IA, to Glacier. S3 Intelligent-Tiering also never auto-tiers objects smaller than 128 KB, such as these 50 KB reports.",
+    "aiExplanation": "The reports are read often for one week and then only kept, so S3 Standard for the first week followed by a lifecycle transition to S3 Glacier Flexible Retrieval is the cheapest fit. Standard retrievals from Glacier Flexible Retrieval finish in about 3 to 5 hours, inside the 6-hour limit. The rule that objects must stay 30 days in S3 Standard first applies only to transitions into Standard-IA or One Zone-IA, not into Glacier, so a 7-day transition is allowed. S3 Intelligent-Tiering does not monitor or move objects smaller than 128 KB, so 50 KB reports would stay in the Frequent Access tier and still incur monitoring charges. You also cannot configure Intelligent-Tiering to move objects into Standard-IA. Glacier Deep Archive is ruled out because standard retrieval takes up to 12 hours."
+  },
+  "saa-0580": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key says A (geolocation), but the goal is to minimize load time, and latency-based routing (C) is built for that. Geolocation routes by where the user is located, not by measured network latency, and needs a default record for users outside the defined areas.",
+    "aiExplanation": "Route 53 latency-based routing answers each DNS query with the endpoint that has the lowest measured network latency for that user, which directly minimizes load time. For the on-premises data center, you create a latency record tagged with the us-west-1 Region because the data center is near it, and a second record for the eu-central-1 endpoint. Geolocation routing sends users to an endpoint based on country or continent, which often matches latency but is not optimized for it, and users outside the listed locations need a default record. Simple routing cannot pick an endpoint based on user location at all. Weighted routing splits traffic evenly no matter where users are. Option C's wording is incomplete, so this question is debatable, but latency routing best fits the stated goal."
+  },
+  "saa-0604": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "The key says C (One Zone-IA), but the requirement to maximize durability and keep objects readily available points to B (S3 Standard-IA). One Zone-IA stores data in a single AZ, so objects are lost if that AZ is destroyed.",
+    "aiExplanation": "S3 Standard-IA stores objects redundantly across at least three Availability Zones, offers the same millisecond access as S3 Standard, and costs less for data older than 30 days that is rarely read. A lifecycle rule that moves objects from S3 Standard to Standard-IA after 30 days fits the access pattern exactly. S3 One Zone-IA is cheaper, but it keeps data in a single AZ: AWS states that data in One Zone-IA will be lost if that AZ is destroyed, so it fails the requirement to maximize durability. S3 Glacier Flexible Retrieval is not readily available because retrievals take minutes to hours. Starting in Intelligent-Tiering and then adding a lifecycle rule to Standard-IA is redundant and adds monitoring charges."
+  },
+  "saa-0636": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The keyed answer, Transfer Family SFTP with a custom identity provider, is defensible, but a Lambda-generated S3 presigned URL (A) is also a common answer because it is serverless and simpler. A presigned URL is temporary and covers a single object, which is why the key prefers Transfer Family for ongoing two-way sharing.",
+    "aiExplanation": "AWS Transfer Family provides a fully managed SFTP endpoint that stores files directly in Amazon S3. Employees anywhere can upload research data to the bucket and download it again with their own credentials, and there are no servers to run. A custom identity provider backed by AWS Secrets Manager gives each employee individual credentials without creating IAM users. Presigned URLs are serverless, but each one grants time-limited access to a single object, so ongoing collection and sharing of many files would mean constantly generating and distributing new URLs. Creating an IAM user and policy for each employee does not scale and weakens security. An S3 File Gateway needs an on-premises or VM appliance, which does not suit employees working around the world."
+  },
+  "saa-0661": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "I believe D is the better answer. Encrypting RDS with a KMS key (option A) does not stop anyone with database credentials and network reach from reading data, because RDS decrypts transparently, so A does not restrict who can access the database.",
+    "aiExplanation": "Option D restricts access at the network layer: the RDS security group only admits traffic from the subnets where the ECS tasks run, and the S3 bucket policy uses the aws:SourceVpce condition so the bucket can only be reached through the S3 gateway endpoint in that VPC. Option A relies on KMS, but RDS encryption at rest is transparent to clients, so KMS key policy permissions never come into play when an application queries the database. Option A also names the task execution role, which is used by the ECS agent to pull images and write logs, not by application code. Option B uses an AWS managed key, whose key policy you cannot edit, and does nothing for RDS. Option C handles S3 by role but has the same RDS network control as D, so D is the more consistent network-based design. Note the RDS VPC endpoint in C and D is only for the RDS API, so the security group is what actually restricts DB access."
+  },
+  "saa-0668": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B (provisioned mode) is the intended answer. The question stresses that the read and write rate is known, and option A's wording to update capacity units makes no sense for on-demand mode, which has no capacity units to set.",
+    "aiExplanation": "When the throughput is known and predictable, provisioned capacity is cheaper per request than on-demand, and you can raise the RCUs and WCUs before the weekly 4-hour test and lower them to the minimum afterward (or use a schedule with Application Auto Scaling). On-demand mode bills per request at a higher unit price and has no RCU or WCU settings, so option A is internally contradictory. Reserved capacity for 1 or 3 years (C and D) commits you to paying for capacity every hour of the term, which is wasteful for a table used 4 hours a week. On-demand is a reasonable real-world choice for sporadic use, which is why this question is debated, but the exam cue of a known request rate points to provisioned mode."
+  },
+  "saa-0685": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "Amazon Forecast was closed to new customers in July 2024, so the keyed pair (D and E) reflects the exam's intended answer but not what a new AWS customer can use today. Newer versions of this question will likely point to SageMaker Canvas or similar.",
+    "aiExplanation": "The requirement is monthly resource predictions from historical time-series data in S3, with no ML experience and a managed service. Amazon Forecast is a fully managed time-series forecasting service: you train a predictor from the historical data in S3 (E) and then query that predictor, for example from a Lambda function behind a function URL (D). The SageMaker options (A, B and C) require choosing algorithms, training and deploying endpoints yourself, which needs ML expertise. Because Forecast no longer accepts new customers, in practice you would now use SageMaker Canvas time-series forecasting, but on this exam question D and E are the intended answers."
+  },
+  "saa-0712": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "I believe D. The question describes the number of requests processed and the time to receive responses, which are the exact definitions of the RequestCount and TargetResponseTime metrics; the routing algorithm to pick is least outstanding requests either way.",
+    "aiExplanation": "The ALB least outstanding requests algorithm sends each new request to the target with the fewest in-flight requests, so overloaded instances stop receiving new work, which is exactly the requirement. Round robin (A and C) ignores load and keeps sending requests to slow targets. The scenario says CloudWatch shows the number of requests processed and the time to receive responses are higher, and AWS documents RequestCount as the number of requests processed and TargetResponseTime as the time elapsed until a response from the target is received. RequestCountPerTarget is an average across a target group and ActiveConnectionCount counts client-to-ALB connections, so neither matches the symptoms described. The key's claim that RequestCount cannot be broken down while RequestCountPerTarget can is not accurate; both are reported at load balancer or target group level, not per instance."
+  },
+  "saa-0728": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "I believe A (ElastiCache for Redis). The load is repeated identical reads, and the question already shows that adding replicas only helped briefly; caching those reads in memory is the cheaper and more effective fix.",
+    "aiExplanation": "Repeated read statements for the same delivery details are a textbook caching case: ElastiCache for Redis serves those results from memory, offloads the Aurora cluster, and a small cache node costs far less than extra Aurora reader instances. Adding another read replica (B) or turning on Aurora Auto Scaling (C) just adds more reader instances, which the scenario shows only gives temporary relief while cost keeps rising with the load. Multiple writer instances (D) address write scaling, not reads, and Aurora MySQL multi-master is no longer offered. The keyed explanation even shows the commenter changing their mind, which is a sign the key is not solid."
+  },
+  "saa-0737": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B (EventBridge). EventBridge rules filter events and invoke the target Lambda functions directly, while option A adds SNS plus SQS queues that each Lambda must poll, which is more to operate.",
+    "aiExplanation": "API Gateway can integrate directly with EventBridge PutEvents, and each EventBridge rule uses an event pattern to match only the events a given Lambda function needs, then invokes that function as a target. That gives fan-out plus content filtering with a single managed service and no queues to manage. Option A also supports filtering through SNS subscription filter policies, but it adds a layer of SQS queues and event source mappings for every function, which is more operational overhead. Amazon MSK (C) requires managing a Kafka cluster and topics, and plain SQS queues (D) have no message filtering, so API Gateway would have to route each message itself. The key relies on the keyword match between message filtering and SNS, but EventBridge filtering is equally capable here."
+  },
+  "saa-0738": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "Option A is the only choice that uses a customer-provided key, but S3 default encryption does not support SSE-C (it supports only SSE-S3, SSE-KMS and DSSE-KMS), so part of the keyed answer is technically not possible.",
+    "aiExplanation": "The requirement is to encrypt existing and future archival objects with a customer-provided key, which means SSE-C. Option A uses an S3 Inventory report to find unencrypted objects and an S3 Batch Operations copy job to re-encrypt them, which is the right pattern for millions of existing objects. Options B and C use SSE-KMS, which is AWS KMS, not a customer-provided key, and the AWS usage report in C and D does not list per-object encryption status. In reality, future objects would need clients to send SSE-C headers on every upload because bucket default encryption cannot be set to SSE-C, and AWS now blocks SSE-C on new buckets by default. Choose A for the exam, but know this limitation."
+  },
+  "saa-0762": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "low",
+    "note": "I lean toward C (RDS for MySQL), because the requirement is the fewest changes, and RDS for MySQL runs the same MySQL engine; both RDS and Aurora support point-in-time restore by default. B versus C is genuinely debatable, so double-check this one.",
+    "aiExplanation": "Options B and C share the same network layout (web tier in public subnets, application tier and database in private subnets) and differ only in RDS for MySQL versus Aurora MySQL. RDS for MySQL is a like-for-like move of the existing MySQL database, which best fits making the fewest possible changes, and RDS automated backups are on by default and allow point-in-time restore to any second within the retention period. The key's explanation claims RDS needs extra configuration for point-in-time recovery, which is not accurate. Aurora MySQL is also compatible and has some operational advantages such as auto-growing storage, which is why some people pick B. Options A and D are weaker because A puts the web tier in private subnets with no load balancer mentioned and D puts the database in public subnets."
+  },
+  "saa-0765": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe C (Volume Gateway cached volumes). The data lives on on-premises storage arrays (block storage), and cached volumes keep the whole dataset in AWS while keeping the frequently used subset on premises for low latency.",
+    "aiExplanation": "Storage Gateway cached volumes present iSCSI block volumes to on-premises servers, store the full dataset in Amazon S3, and keep the recently accessed subset in the local cache, which matches block storage arrays, low-latency access to a subset, and reduced capital expense. A File Gateway (B) also caches data locally, but it exposes NFS or SMB file shares and stores files as S3 objects, so it fits file servers rather than storage arrays; that is why the two are debated. DataSync (A) only moves data and gives no low-latency local access afterward. EFS over a Site-to-Site VPN (D) puts every access over the VPN link, so it would not give minimal lag. This question appears in older exam banks with C as the commonly accepted answer."
+  },
+  "saa-0770": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe A and B (ECS on Fargate and EKS on Fargate). Both are managed container platforms that scale per service with no servers to manage, while option C misuses Lambda, which is not a general host for an existing Docker application.",
+    "aiExplanation": "AWS Fargate runs containers without provisioning or managing EC2 instances, and it works with both Amazon ECS (via Service Auto Scaling) and Amazon EKS (via the Horizontal Pod Autoscaler), so each container service scales independently with no infrastructure to manage. ECS or EKS on EC2 worker nodes (D and E) require managing and patching the instances and cluster capacity. API Gateway plus Lambda (C) can run container images only if they are rebuilt around the Lambda runtime interface and fit Lambda limits such as the 15-minute timeout, so it is not a drop-in host for an existing containerized app. The keyed explanation gives no reasoning at all."
+  },
+  "saa-0771": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "high",
+    "note": "I believe D. A normal Auto Scaling group that scales out on demand from a preconfigured AMI is the cost-effective way to handle sudden traffic; option C's idea of caching dynamic content and then scaling in is not a realistic design.",
+    "aiExplanation": "An Auto Scaling group with a dynamic scaling policy adds instances only when traffic rises, and a preconfigured (golden) AMI in the launch template makes new instances ready quickly, so you pay for extra capacity only during the spike. Option A keeps peak-size capacity around and relies on stopped instances in a way Auto Scaling does not work (warm pools are the real feature, and still cost EBS storage). Option B sizes the group for peak at all times, which is the opposite of cost-effective. Option C assumes CloudFront and ElastiCache can fully cache dynamic content so the origin can be scaled in, but dynamic, per-user content such as carts and checkout still hits the origin, so this does not reliably handle the surge."
+  },
+  "saa-0781": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "medium",
+    "note": "Amazon QLDB reached end of support on July 31, 2025, so D is the intended exam answer but no longer a real option; AWS now suggests Aurora PostgreSQL with audit features for ledger-style needs.",
+    "aiExplanation": "The requirement is a managed service with immutable, cryptographically verifiable logs of data changes, which is exactly what Amazon QLDB was built for: its journal is append-only and every revision is chained with SHA-256 hashes that can be verified. Redshift (A) is a data warehouse, Neptune (B) is a graph database and Timestream (C) is a time-series database, and none of them provides a cryptographically verifiable change history. QLDB is also serverless, so it needs minimal operational support. Because the service has been retired, treat this as a recall question about what QLDB did rather than a current design choice."
+  },
+  "saa-0805": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "This is a frequently debated question. The key (reserved concurrency plus more memory) relies on reserved concurrency being free; provisioned concurrency (D) also maintains latency but adds cost, so check the exact wording on cost versus latency.",
+    "aiExplanation": "Memory is the only CPU knob for Lambda: CPU scales with allocated memory, so CPU-intensive code finishes faster with more memory, and AWS Compute Optimizer recommends the memory size that minimizes cost while keeping duration low. Shorter duration often offsets the higher per-millisecond price, which cuts compute cost while keeping latency down. Reserved concurrency costs nothing and guarantees that this function always has its share of account concurrency available during marketing events, so other functions cannot starve it. Provisioned concurrency keeps environments warm but is billed continuously, which conflicts with reducing cost for spiky event traffic. Decreasing memory would slow CPU-bound code and increase latency."
+  },
+  "saa-0838": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe the answer is B (AWS Global Accelerator). CloudFront never accepted RTMP ingest from clients, its RTMP distributions were for playback only and were discontinued at the end of 2020, and the requirement is accelerated TCP back to the origin.",
+    "aiExplanation": "AWS Global Accelerator accepts TCP and UDP traffic on any port at the nearest AWS edge location and carries it over the AWS global network to the regional endpoint, which gives reporters around the world faster and more stable TCP connections for RTMP uploads. It works for any TCP protocol, so RTMP needs no change. CloudFront is a content delivery network for HTTP and HTTPS delivery to viewers; it does not proxy RTMP ingest, and its old RTMP distributions served only playback and have been retired. Client VPN adds encryption and overhead without acceleration. EC2 instances with Elastic IPs give static addresses but no network acceleration."
+  },
+  "saa-0844": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe the answer is B. A recurring scheduled action is the Auto Scaling feature built for predictable, recurring peaks and adds capacity before the spike; option C (raising min/max during the peak) is a manual, after-the-fact step.",
+    "aiExplanation": "EC2 Auto Scaling scheduled actions change the group's minimum, maximum and desired capacity at a specified time, and they can recur, for example yearly before the holiday. Scheduling the increase ahead of the known peak means instances are already running and warm when traffic arrives, which is exactly what proactive scaling means. A CloudWatch alarm on 90% CPU is reactive and scales only after users are already affected. Raising min and max 'during the peak demand period' is manual and happens too late unless someone remembers to do it in advance. An SNS notification on instance launch only alerts and does not add capacity."
+  },
+  "saa-0876": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "low",
+    "note": "The keyed answer (centralized mailbox for root emails plus one distribution list per category) is defensible, but option B (company-managed distribution lists per business unit) is also a commonly argued answer; both avoid tying root email to an individual.",
+    "aiExplanation": "The root user email address should not belong to one individual; it should be a company-controlled address so that access survives staff changes and is restricted. Pointing each account's root email to aliases of a centralized, tightly controlled mailbox keeps root-level messages and password resets under central control. AWS account alternate contacts let billing, operations and security notifications go to separate addresses, so business-managed distribution lists per category send each notification type to the right team. Option C ties the root email to one person, which is a single point of failure and a security risk. Option A gives every account owner access to the shared root mailbox, widening access to root credentials. Option B is close, but distribution lists that fan out to many administrators expose root-level emails to more people."
+  },
+  "saa-0877": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a",
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The keyed pair (RDS Proxy plus SQS) is defensible, but some argue for ElastiCache (B) instead of A; also, the explanation itself argues against A while A is keyed.",
+    "aiExplanation": "Timeouts at peak usually come from the application tier and database being overwhelmed by sudden bursts of writes and connections. Sending purchase requests to an SQS queue decouples the front end from processing, so requests are never lost and an Auto Scaling group of workers drains the queue at a sustainable rate. Amazon RDS Proxy pools and reuses database connections, which protects Aurora from connection storms as the worker fleet scales. ElastiCache mostly helps read-heavy workloads, while purchases are writes. A Lambda retry loop does not add capacity, and an API Gateway usage plan only throttles clients."
+  },
+  "saa-0890": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "A single-instance Auto Scaling group (A) is the classic 'self-healing legacy app' answer, but two instances behind an NLB (C) is also argued; it depends on whether the legacy app can safely run as two copies.",
+    "aiExplanation": "Because the application design cannot change, it may not be able to run as multiple active copies. An Auto Scaling group with minimum and maximum of one, spanning multiple Availability Zones, built from an AMI of the server, automatically replaces the instance in another AZ if it or its AZ fails, and a load balancer in front gives a stable endpoint. Running two copies behind an NLB (C) assumes the app can run in parallel, which a legacy design may not support. Hourly backups with manual restore give slow recovery and can lose up to an hour of data. Refactoring into containers violates the no-design-change constraint."
+  },
+  "saa-0916": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "medium",
+    "note": "I believe the answer is A. With millions of 10 KB files, S3 Standard-IA bills each object as at least 128 KB, and S3 Lifecycle by default does not transition objects under 128 KB, so aggregating files into large objects is the cost-effective approach.",
+    "aiExplanation": "With millions of tiny 10 KB files, per-object overheads dominate cost: S3 Standard-IA and Glacier Instant Retrieval charge a 128 KB minimum per object, lifecycle transitions are charged per request, and Glacier Deep Archive adds about 40 KB of metadata overhead per object. S3 Lifecycle also skips objects smaller than 128 KB by default. Bundling the files into large archive objects before uploading with DataSync removes almost all of that overhead. Glacier Instant Retrieval still gives millisecond access for the rare reads in year one, and a lifecycle rule moves the archives to Glacier Deep Archive for the 7-year retention. Option D stores each 10 KB file as its own object, which is billed as 128 KB in Standard-IA and needs millions of transitions. Options B and C keep data in more expensive tiers for the 7-year archive."
+  },
+  "saa-0920": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B. Assigning least-privilege IAM roles to developers is AWS best practice; long-lived IAM access keys (C) are a credential-leak risk and are not an access control solution for sensitive data.",
+    "aiExplanation": "Option B is correct: define IAM roles with fine-grained, least-privilege permissions and have each developer assume the role that matches their job (typically through IAM Identity Center or role assumption), so they receive short-lived temporary credentials. This directly limits what each developer can reach and prevents unauthorized access to sensitive data. Option C relies on long-term IAM access keys, which AWS explicitly discourages because they can leak and never expire on their own, and access keys by themselves do not define any permissions. Option A shares credentials, which destroys accountability and violates basic security practice. Option D is wrong because Amazon Cognito user pools are for end users of applications, not for workforce access to AWS resources."
+  },
+  "saa-0921": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b",
+      "e"
+    ],
+    "confidence": "medium",
+    "note": "I believe B and E. To scale horizontally with an Auto Scaling group you need an AMI and a launch template (B) plus an ASG behind an ALB (E); a vertical-scaling recommendation (A) does not improve availability and an ASG with an ALB is a horizontal construct.",
+    "aiExplanation": "The fix for a single overloaded instance that also needs better availability is horizontal scaling. First create an AMI from the existing web server and reference it in a launch template (B), which is the building block an Auto Scaling group needs to launch identical instances. Then create an Auto Scaling group across multiple Availability Zones behind an Application Load Balancer (E) so capacity grows with demand and the app survives an instance or AZ failure. Option A only resizes one instance vertically, which still leaves a single point of failure and does not improve availability. Options C and D are internally inconsistent: an ASG with an ALB scales horizontally, not vertically, and Compute Optimizer recommends instance types, it does not perform horizontal scaling."
+  },
+  "saa-0924": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B. Running steady-state tasks on Fargate and burst tasks on Fargate Spot in a capacity provider strategy is the standard cost-optimized, highly available pattern; D only rightsizes and does nothing to handle bursts cheaply.",
+    "aiExplanation": "Option B uses an ECS capacity provider strategy with a base of regular Fargate tasks that always serve the 24/7 workload, and adds Fargate Spot tasks for short bursts. The baseline stays highly available because it never depends on Spot, while burst capacity costs up to about 70 percent less; if some Spot tasks are reclaimed during a burst the steady-state tasks keep serving customers. Option C reverses this and puts the always-on workload on interruptible Spot capacity, which risks availability. Options A and D only rightsize the task size; rightsizing is useful but does not address cost-effective handling of burst traffic, and A adds third-party load testing effort."
+  },
+  "saa-0926": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "high",
+    "note": "I believe B. AWS Shield Advanced protects against DDoS, not against unauthorized access attempts; NLBs support security groups, but they must be added when the NLB is created, so recreating the NLB with a security group that allows only trusted IPs is the minimal fix.",
+    "aiExplanation": "Network Load Balancers now support security groups, which let you allow only trusted source IP ranges and block everything else at the load balancer. A security group can only be associated with an NLB at creation time, so the NLB must be recreated with one (B); this is a small architectural change and directly stops unauthorized clients. Option A is wrong because AWS WAF cannot be attached to an NLB, only to ALB, CloudFront, API Gateway, AppSync and similar layer 7 services. Option C adds a second load balancer and complexity without protecting the existing one. Option D, Shield Advanced, mitigates DDoS volumetric attacks but does not filter out individual unauthorized access attempts."
+  },
+  "saa-0928": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "low",
+    "note": "The keyed answer C is debatable: running an infrequent, on-demand extract program continuously in an Auto Scaling group with a Savings Plan is not very cost-effective, but it is the only option that truly requires no code changes. Option A (Lambda) is cheaper but would likely require repackaging the program and wiring an upload trigger.",
+    "aiExplanation": "The deciding constraint is that the company does not want any code changes and wants the least implementation effort. Option C keeps both the web portal and the document extract program as they are, runs them in an Auto Scaling group for scalability and uptime, and lowers cost with a Savings Plan, so nothing needs to be rewritten. Option A would be cheaper for an infrequent job, but moving the extract program to AWS Lambda and invoking it on upload generally requires code and integration changes. Option B uses Spot Instances for a portal that requires 100 percent uptime, which is risky. Option D re-architects the portal onto S3, API Gateway and Lambda, which is a large code change."
+  },
+  "saa-0929": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe A and C. Cross-account SNS to Lambda needs a Lambda resource-based policy that lets SNS invoke the function and an SNS topic policy that lets the administrator account subscribe; adding an SQS buffer (B) is not required and would itself still need the cross-account topic permission.",
+    "aiExplanation": "To have an SNS topic in one account trigger a Lambda function in another, two permissions are needed. The Lambda function's resource-based policy must allow the sns.amazonaws.com principal (scoped to the topic ARN) to invoke it (A). The SNS topic's access policy must allow the administrator account to subscribe its Lambda endpoint to the topic (C), after which the subscription is created. Option B adds an SQS queue, which is optional buffering and does not remove the need for the cross-account topic permission, so it does not complete the solution. Option D is wrong because EventBridge does not capture SNS message contents as events this way, and option E replaces the event-driven requirement with batch analysis in Athena."
+  },
+  "saa-0940": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key (C, SSE-KMS with the AWS managed key) is defensible because AWS managed keys are free and rotate every year automatically, while a customer managed key costs a monthly fee. Double-check that you are comfortable with the claim that rotation of AWS managed keys is trackable in CloudTrail, which is why some argue for D.",
+    "aiExplanation": "SSE-KMS with the AWS managed key for S3 (aws/s3) encrypts objects at rest, has no monthly key storage charge, and AWS rotates AWS managed keys automatically every year. Every use of the key is logged in AWS CloudTrail, which satisfies the tracking requirement at the lowest cost. A customer managed KMS key (D) also supports yearly automatic rotation with CloudTrail events, but costs about 1 USD per key per month, so it is not the cheapest. SSE-S3 (B) uses keys that are invisible to you and not trackable in CloudTrail, and SSE-C (A) makes you manage and rotate keys yourself."
+  },
+  "saa-0950": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The key C (existing bucket, CRR, SSE-S3, Athena) is the least-effort option, but note that CRR only replicates objects written after the rule is created, so existing data needs S3 Batch Replication; A avoids this by loading data into a new bucket after CRR is configured, at the cost of more setup.",
+    "aiExplanation": "Amazon Athena is the serverless SQL engine for data in S3, which rules out B and D because Amazon RDS is not a serverless query layer over S3. Between A and C, C reuses the existing bucket, turns on Cross-Region Replication and uses SSE-S3, which is enabled by default and needs no key management, so it has the least operational overhead. The catch is that a new replication rule only applies to new objects; existing objects must be replicated once with S3 Batch Replication. Option A creates a new bucket with KMS multi-Region keys and reloads all the data, which works but adds key management and data movement effort."
+  },
+  "saa-0951": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The key A puts uploaded images in S3 Glacier Deep Archive because they are only read twice a year for training; this is defensible on cost, but debatable because the uploaded images are also used to generate AI images, and Deep Archive restores take up to 12 to 48 hours.",
+    "aiExplanation": "Option A matches each data set to its access pattern. Uploaded images are only needed for model training twice a year, so S3 Glacier Deep Archive is the cheapest storage and a bulk restore before each training run is acceptable. Premium users can download generated images at any time, so S3 Standard fits, while non-premium users download at most once every 6 hours, so S3 Standard-IA is cheaper. Option C keeps uploaded images in One Zone-IA, which costs more than Deep Archive for data read twice a year and risks loss in an AZ failure. Options B and D put all generated images in Glacier Flexible Retrieval, which is too slow for premium users who need immediate downloads."
+  },
+  "saa-0971": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "c",
+      "e"
+    ],
+    "confidence": "high",
+    "note": "I believe A, C and E. Security groups are stateful and health checks are initiated by the ALB, so the ALB security group needs outbound rules to the instances on 443 and 8443; an inbound rule from the instances on 8443 (F) is never used.",
+    "aiExplanation": "The ALB security group needs one inbound rule and two outbound rules. Inbound, it must allow HTTPS on port 443 from 0.0.0.0/0 so clients on the internet can reach it (A). Outbound, it must allow HTTPS to the web application instances on port 443 for forwarded traffic (C) and on port 8443 for the HTTPS health checks (E). Because security groups are stateful, return traffic is automatically allowed, so no inbound rules from the instances are needed; this rules out D and F. Option B is broader than necessary since it opens port 443 to the whole internet instead of only to the instances."
+  },
+  "saa-0973": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "high",
+    "note": "I believe A. Amazon Athena supports querying objects encrypted with CSE-KMS (set has_encrypted_data in the table properties), and it is the cheapest choice for occasional queries on day-partitioned Parquet; the key's claim that Athena cannot read CSE-KMS data is incorrect.",
+    "aiExplanation": "Athena reads data in place in S3 and charges only for data scanned, which suits occasional queries, and Parquet plus per-day prefixes (partitions) keeps the scanned amount small. Athena supports the SSE-S3, SSE-KMS and CSE-KMS encryption options; for CSE-KMS you mark the table with has_encrypted_data and Athena decrypts using the KMS key. EMR Serverless with Spark SQL (D) can also read the data but needs job setup and has higher per-run overhead, so it is less cost-effective for ad hoc SQL. S3 Select (B) cannot query client-side encrypted objects and works on one object at a time, and Redshift Spectrum (C) requires a Redshift cluster or workgroup, which is unnecessary cost."
+  },
+  "saa-0978": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "The answer C depends on a condition key that is missing from the question text (likely aws:ResourceAccount); without it the option is incomplete, so double-check the original wording.",
+    "aiExplanation": "Option C adds a gateway VPC endpoint for S3 so traffic stays on the AWS network at no extra cost, and adds a Deny statement in the instance profile policy with a condition such as aws:ResourceAccount not equal to the company's account ID. This one statement covers every current and future customer bucket in the account, so nothing has to change as new buckets are added. Option A lists specific buckets, which must be updated every time a customer bucket is created, so it has more overhead. Options B and D route S3 traffic through a NAT gateway, which costs more and sends traffic over the public S3 endpoint, and D requires editing every bucket policy."
+  },
+  "saa-0980": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "b"
+    ],
+    "confidence": "medium",
+    "note": "I believe B. IAM Roles Anywhere is designed to give on-premises workloads temporary AWS credentials using X.509 certificates; D still uses a long-term IAM user access key, which does not meet the temporary access requirement.",
+    "aiExplanation": "IAM Roles Anywhere lets workloads outside AWS, such as on-premises virtual machines, exchange an X.509 certificate from a trusted certificate authority for temporary credentials of an IAM role, which can be scoped to only the required S3 bucket. This provides exactly the temporary, secure access the application needs and fits alongside the company's IAM Identity Center setup. Option D stores a long-term IAM user access key in Secrets Manager, which protects the key at rest but is still permanent credentials, not temporary access. Option C hardcodes IAM user keys in the CLI configuration, which is worse. Option A uses an IP-based bucket policy, which is weak and depends on a public path to S3."
+  },
+  "saa-1004": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "a",
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "I believe A and C. The AWSEC2-PatchLoadBalancerInstance runbook deregisters and re-registers instance targets, so the target group must use the instance target type; Maintenance Windows (D) only schedule tasks and do not by themselves remove instances from the load balancer.",
+    "aiExplanation": "The errors come from trying to take instances out of service through a target group that registers targets by IP address. The AWSEC2-PatchLoadBalancerInstance Automation runbook (C) is built to deregister an EC2 instance from its load balancer target group, patch it, and register it back, and it works with instance-type targets, so changing the target group to the instance target type (A) removes the incompatibility. Option D is wrong because a Maintenance Window is only a schedule; it does not deregister instances from an ALB unless you run a runbook such as the one in C. Option B ignores the error, and option E misuses State Manager, which enforces configuration rather than draining instances from a load balancer."
+  },
+  "saa-1006": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "d"
+    ],
+    "confidence": "high",
+    "note": "I believe D. An Auto Scaling group with Spot capacity behind an ALB is the only option that scales seamlessly, and a stateless, resilient app tolerates Spot interruptions; A adds just one fixed instance and does not scale.",
+    "aiExplanation": "The requirement is to make the application scale seamlessly at the lowest cost. Option D bakes the app into an AMI and launch template, runs it in an Auto Scaling group that adds and removes instances with demand, and puts an Application Load Balancer in front. Using Spot capacity is the cheapest compute, and because the application is stateless and highly resilient, losing an individual Spot instance only shifts traffic to the others. Option A only adds a second On-Demand instance, which is a fixed capacity that does not scale. Option B has the same problem and uses DNS weighting instead of load balancing, and option C stops the instance to resize it, causing downtime."
+  },
+  "saa-1011": {
+    "flag": "uncertain",
+    "aiAnswer": [
+      "a"
+    ],
+    "confidence": "low",
+    "note": "The keyed answer relies on Scheduled Reserved Instances, which AWS no longer offers for purchase; it is the intended exam answer, but in real life you would use On-Demand Capacity Reservations or simply cover the near-continuous usage with Reserved Instances or Savings Plans.",
+    "aiExplanation": "The Sunday workload runs for a fixed 12-hour window and cannot be interrupted, which rules out Spot Instances in options C and D. Scheduled Reserved Instances were designed for exactly this kind of recurring, predictable time window at a discount, and Standard Reserved Instances give the biggest discount for instances that run constantly Monday to Saturday, which makes A the intended answer. Option B buys Convertible Reserved Instances for a 12-hour weekly window, so you would pay for a full-time reservation that is idle most of the week. Be aware that AWS stopped selling Scheduled Reserved Instances, so on a current account a Savings Plan or Reserved Instances covering the whole week are the realistic choice."
+  },
+  "saa-1015": {
+    "flag": "disputed",
+    "aiAnswer": [
+      "c"
+    ],
+    "confidence": "medium",
+    "note": "As written, D gives the UI pods access to S3 and the data service pods access to DynamoDB, which is the reverse of the requirement, so I believe C. D is very likely the intended answer with a typo, because IRSA with one role per service account is the correct mechanism.",
+    "aiExplanation": "The right pattern is IAM roles for service accounts (IRSA): create a separate Kubernetes service account for the UI pods and for the data service pods, and map each to its own IAM role through the cluster's OIDC provider. Option C does this and gives the UI service account DynamoDB permissions and the data services account S3 permissions, which matches the requirement, although scoped-down policies would be better than the FullAccess managed policies. Option D uses the same mechanism but, as worded, grants UI pods S3 and data pods DynamoDB, the opposite of what is asked. Option A attaches both policies to the node instance profile, so every pod gets both permissions and Kubernetes RBAC cannot restrict AWS API access. Option B is not possible because IAM policies cannot be attached directly to pods."
+  }
+}

@@ -1,3 +1,12 @@
+/** AI audit of a question's answer key and explanation, loaded from data/reviews.json. */
+export type QuestionReview = {
+  /** disputed: AI disagrees with the key. uncertain: key defensible but the question is outdated, ambiguous or broken. */
+  flag: "disputed" | "uncertain";
+  aiAnswer: string[];
+  confidence: "high" | "medium" | "low";
+  note: string;
+  aiExplanation: string;
+};
 export type Choice = { id: string; text: string };
 export type Question = {
   id: string;
@@ -8,6 +17,7 @@ export type Question = {
   explanation: string;
   tags: string[];
   multiple: boolean;
+  review?: QuestionReview;
 };
 export type Exam = {
   id: string;

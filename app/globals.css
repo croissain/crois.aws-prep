@@ -35,7 +35,7 @@ button, input { font: inherit; }
   right: -0.3rem;
   left: -0.3rem;
   z-index: 0;
-  height: 1.75rem;
+  height: var(--guide-h, 1.75rem);
   border-radius: 0.4rem;
   background: rgb(9 105 255 / 0.075);
   content: "";
@@ -190,3 +190,59 @@ a:focus-visible {
   outline: 2px solid #0969ff;
   outline-offset: 3px;
 }
+
+/* Formatted question and explanation text (react-markdown output). */
+.rich > * + * { margin-top: 0.8em; }
+.rich p { text-wrap: pretty; }
+.rich strong { font-weight: 600; }
+.rich ul { list-style: disc; padding-left: 1.35em; }
+.rich ol { list-style: decimal; padding-left: 1.35em; }
+.rich li + li { margin-top: 0.3em; }
+.rich li::marker { color: rgb(9 105 255 / 0.65); }
+.rich blockquote {
+  border-left: 3px solid #0969ff;
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: rgb(9 105 255 / 0.06);
+  padding: 0.55em 0.95em;
+  font-weight: 500;
+}
+.rich blockquote strong { color: #0969ff; font-weight: 700; }
+.rich a {
+  color: #0969ff;
+  text-decoration: underline;
+  text-decoration-color: rgb(9 105 255 / 0.35);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.rich a:hover { text-decoration-color: currentColor; }
+.rich code {
+  border-radius: 0.35rem;
+  background: rgb(23 24 21 / 0.07);
+  padding: 0.1em 0.38em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+  overflow-wrap: anywhere;
+}
+.rich pre {
+  overflow-x: auto;
+  border: 1px solid rgb(23 24 21 / 0.08);
+  border-radius: 0.7rem;
+  background: rgb(23 24 21 / 0.04);
+  padding: 0.85em 1em;
+  font-size: 0.88em;
+  line-height: 1.65;
+}
+.rich pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.rich .hljs-attr { color: #0550ae; }
+.rich .hljs-string { color: #0a7a3d; }
+.rich .hljs-number, .rich .hljs-literal { color: #b45309; }
+.rich .hljs-punctuation { opacity: 0.6; }
+.dark .rich li::marker { color: rgb(96 165 250 / 0.7); }
+.dark .rich blockquote { border-left-color: #60a5fa; background: rgb(96 165 250 / 0.08); }
+.dark .rich blockquote strong, .dark .rich a { color: #60a5fa; }
+.dark .rich a { text-decoration-color: rgb(96 165 250 / 0.4); }
+.dark .rich code { background: rgb(255 255 255 / 0.09); }
+.dark .rich pre { border-color: rgb(255 255 255 / 0.08); background: rgb(255 255 255 / 0.04); }
+.dark .rich .hljs-attr { color: #79b8ff; }
+.dark .rich .hljs-string { color: #85e89d; }
+.dark .rich .hljs-number, .dark .rich .hljs-literal { color: #ffab70; }

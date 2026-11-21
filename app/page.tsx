@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import examsData from "@/data/exams.json";
 import questionsData from "@/data/questions.json";
 import presetsData from "@/data/presets.json";
+import reviewsData from "@/data/reviews.json";
 import { AppShell, View } from "@/components/AppShell";
 import { Home } from "@/components/Home";
 import { Practice } from "@/components/Practice";
@@ -11,12 +12,14 @@ import { ExamRunner } from "@/components/ExamRunner";
 import { Results } from "@/components/Results";
 import { HistoryView } from "@/components/HistoryView";
 import { ImportQuestions } from "@/components/ImportQuestions";
-import { Exam, ExamResult, Preset, Question } from "@/lib/types";
+import { Exam, ExamResult, Preset, Question, QuestionReview } from "@/lib/types";
 import { loadHistory, saveResult } from "@/lib/storage";
 import { generateMockExam } from "@/lib/mockExam";
 
 const presets = presetsData as Preset[];
-const builtInQuestions = [...(questionsData as Question[]), ...presets.flatMap(preset => preset.questions)];
+const reviews = reviewsData as Record<string, QuestionReview>;
+const builtInQuestions = [...(questionsData as Question[]), ...presets.flatMap(preset => preset.questions)]
+  .map(question => reviews[question.id] ? { ...question, review: reviews[question.id] } : question);
 const exams = examsData as Exam[];
 
 export default function Page() {
