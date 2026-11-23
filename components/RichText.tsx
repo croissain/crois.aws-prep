@@ -47,7 +47,10 @@ function rehypeMarks({ highlights }: { highlights: TextHighlight[] }) {
 
 const highlightLanguages = { json, bash };
 
-export function RichText({ text, kind, highlights = [], onRemove }: { text: string; kind: TextKind; highlights?: TextHighlight[]; onRemove?: (id: string) => void }) {
+/** Answer choices stay plain text unless they carry line breaks or JSON (for example IAM policy choices). */
+export const isRichChoice = (text: string) => /\n|[{}]/.test(text);
+
+export function RichText({ text, kind, highlights = [], onRemove, inverted = false }: { text: string; kind: TextKind; highlights?: TextHighlight[]; onRemove?: (id: string) => void; inverted?: boolean }) {
   const markdown = useMemo(() => formatText(text, kind), [text, kind]);
   const copyTimer = useRef<number | null>(null);
   const feedbackTimer = useRef<number | null>(null);
@@ -63,12 +66,12 @@ export function RichText({ text, kind, highlights = [], onRemove }: { text: stri
         onClick={event => { event.stopPropagation(); if (copyTimer.current !== null) window.clearTimeout(copyTimer.current); copyTimer.current = window.setTimeout(() => { navigator.clipboard.writeText(String(p.dataCopy)).then(() => { setCopied(id); if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current); feedbackTimer.current = window.setTimeout(() => setCopied(null), 900); }).catch(() => undefined); copyTimer.current = null; }, 220); }}
         onMouseDown={event => { if (event.detail > 1) event.preventDefault(); }}
         onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); if (copyTimer.current !== null) window.clearTimeout(copyTimer.current); copyTimer.current = null; setCopied(null); onRemove?.(id); window.getSelection()?.removeAllRanges(); }}
-        className={`relative box-decoration-clone cursor-pointer rounded px-0.5 py-0.5 ${strike ? "bg-shu/10 text-inherit line-through decoration-shu/50 decoration-2" : "bg-ai text-white"}`}>
+        className={`relative box-decoration-clone cursor-pointer rounded px-0.5 py-0.5 ${strike ? "bg-shu/10 text-inherit line-through decoration-shu/50 decoration-2" : inverted ? "bg-white text-ai" : "bg-ai text-white"}`}>
         {children}
         {copied === id && p.dataFirst === "1" && <span className="copy-float pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 rounded-full bg-sumi px-2.5 py-1 text-[10px] font-medium leading-none text-white shadow-soft dark:bg-white dark:text-sumi">Copied</span>}
       </mark>;
     }
-  }), [copied, onRemove]);
+  }), [copied, onRemove, inverted]);
 
   return <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeHighlight, { languages: highlightLanguages, detect: false }], [rehypeMarks, { highlights }]]} components={components}>{markdown}</ReactMarkdown>;
 }

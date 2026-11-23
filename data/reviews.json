@@ -597,15 +597,6 @@
     "note": "I believe C and E. RDS for MySQL requires automatic backups (retention period greater than 0) before you can create a read replica, and binary logging is managed by RDS automatically, so there is no separate binlog setting to enable.",
     "aiExplanation": "Amazon RDS for MySQL will not let you create a read replica unless automatic backups are enabled on the source, which you do by setting the backup retention period to a value other than 0. AWS also recommends letting long-running transactions complete before creating the replica, because the replica is created from a snapshot and must catch up, and open transactions can delay or break that process. Binary logging (A) is turned on by RDS automatically when backups are enabled, so it is not a separate step you perform. Failover priority (B) applies to Aurora replicas, not to setting up an RDS MySQL read replica. Global tables (D) are a DynamoDB feature."
   },
-  "saa-0253": {
-    "flag": "uncertain",
-    "aiAnswer": [
-      "c"
-    ],
-    "confidence": "low",
-    "note": "The question refers to Policy1 and Policy2 but the policy documents are missing, so it cannot be answered from the text; C is the commonly cited answer based on the original exhibit.",
-    "aiExplanation": "In the original exam item, the two policies were shown as JSON exhibits. One policy allowed broad delete actions while the other contained an explicit Deny for actions such as deleting directories (AWS Directory Service), IAM users and CloudWatch Logs. Because an explicit Deny always overrides an Allow in IAM policy evaluation, the only delete action left permitted was ec2:TerminateInstances, so the engineer can delete EC2 instances. Without the exhibit you cannot verify this, so treat this item as unreliable and focus on the rule that explicit Deny wins over Allow."
-  },
   "saa-0275": {
     "flag": "disputed",
     "aiAnswer": [

@@ -232,7 +232,7 @@ a:focus-visible {
   font-size: 0.88em;
   line-height: 1.65;
 }
-.rich pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.rich pre code, .dark .rich pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
 .rich .hljs-attr { color: #0550ae; }
 .rich .hljs-string { color: #0a7a3d; }
 .rich .hljs-number, .rich .hljs-literal { color: #b45309; }
@@ -246,3 +246,5 @@ a:focus-visible {
 .dark .rich .hljs-attr { color: #79b8ff; }
 .dark .rich .hljs-string { color: #85e89d; }
 .dark .rich .hljs-number, .dark .rich .hljs-literal { color: #ffab70; }
+.rich.rich-inverted pre { border-color: rgb(255 255 255 / 0.25); background: rgb(255 255 255 / 0.12); }
+.rich.rich-inverted pre .hljs-attr, .rich.rich-inverted pre .hljs-string, .rich.rich-inverted pre .hljs-number, .rich.rich-inverted pre .hljs-literal { color: inherit; }

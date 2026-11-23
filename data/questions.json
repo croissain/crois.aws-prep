@@ -8606,7 +8606,7 @@
   {
     "id": "saa-0253",
     "examId": "aws-saa-c03",
-    "prompt": "A solutions architect has created two IAM policies: Policy1 and Policy2. Both policies are attached to an IAM group. A cloud engineer is added as an IAM user to the IAM group. Which action will the cloud engineer be able to perform?",
+    "prompt": "A solutions architect has created two IAM policies: Policy1 and Policy2. Both policies are attached to an IAM group. Policy1: {\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": [\"iam:Get*\", \"iam:List*\", \"kms:List*\", \"ec2:*\", \"ds:*\", \"logs:Get*\", \"logs:Describe*\"], \"Resource\": \"*\"}]} Policy2: {\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Deny\", \"Action\": \"ds:Delete*\", \"Resource\": \"*\"}]} A cloud engineer is added as an IAM user to the IAM group. Which action will the cloud engineer be able to perform?",
     "choices": [
       {
         "id": "a",
@@ -8628,7 +8628,7 @@
     "correctChoiceIds": [
       "c"
     ],
-    "explanation": "Explicite deny on directories, only available action for deleting is EC2",
+    "explanation": "Policy1 allows only read-style IAM, KMS and CloudWatch Logs actions (iam:Get*, iam:List*, kms:List*, logs:Get*, logs:Describe*) plus every EC2 action (ec2:*) and every Directory Service action (ds:*). Policy2 explicitly denies ds:Delete*, and an explicit Deny always overrides an Allow, so deleting directories is blocked. Option A fails because no policy allows iam:DeleteUser; Get and List actions are read-only. Option B fails because of the explicit Deny on ds:Delete*. Option D fails because no policy allows logs:DeleteLogGroup or logs:DeleteLogStream. Option C works because ec2:* includes ec2:TerminateInstances, so the engineer can delete EC2 instances.",
     "tags": [
       "Architecture Design",
       "Amazon EC2",

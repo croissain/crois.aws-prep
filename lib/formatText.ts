@@ -4,7 +4,7 @@
  * and JSON, CLI commands, IAM actions, ARNs and links as code or links.
  */
 
-export type TextKind = "prompt" | "explanation";
+export type TextKind = "prompt" | "explanation" | "choice";
 
 type Token = { kind: "code" | "json" | "url"; value: string };
 
@@ -81,7 +81,7 @@ function restore(markdown: string, tokens: Token[]) {
       const label = `${url.hostname.replace(/^www\./, "")}${tail ? ` › ${decodeURIComponent(tail).replace(/\.html?$/, "")}` : ""}`;
       return `[${escapeMarkdown(label)}](${token.value.replace(/[()\s]/g, encodeURIComponent)})`;
     }
-    if (token.kind === "json" && token.value.includes("\n")) return `\n\n\`\`\`json\n${token.value}\n\`\`\`\n\n`;
+    if (token.kind === "json" && JSON.stringify(JSON.parse(token.value)).length > 60) return `\n\n\`\`\`json\n${token.value}\n\`\`\`\n\n`;
     const fence = token.value.includes("`") ? "``" : "`";
     return `${fence}${token.kind === "json" ? JSON.stringify(JSON.parse(token.value)) : token.value}${fence}`;
   });
@@ -140,8 +140,8 @@ function block(text: string, tokens: Token[], kind: TextKind) {
   return restore(emphasize(escapeMarkdown(text), kind), tokens);
 }
 
-export function formatText(text: string, kind: TextKind): string {
-  if (!text) return "";
+/** Formats one line of text: sentence-based paragraphs, "•" lists and, for prompts, the final question on its own line. */
+function formatLine(text: string, kind: TextKind): string {
   const { plain, tokens } = protect(text);
   const bullets = splitBullets(plain);
   const intro = bullets ? bullets.intro : plain;
@@ -164,4 +164,59 @@ export function formatText(text: string, kind: TextKind): string {
   paragraphs(tail, kind).forEach(p => out.push(block(p, tokens, kind)));
   if (question.length) out.push(block(question.join(" "), tokens, kind));
   return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+const BULLET_PREFIX = /^\s*[•●▪◦]\s?/;
+const LIST_ITEM = /^\s*(?:[•●▪◦]\s*|[-*–]\s+|-(?=[A-Z]))/;
+
+/** A line that belongs to a JSON document: braces, brackets, or a quoted key/value, optionally behind a "•" bullet. */
+function isJsonLine(line: string) {
+  return /^\s*(?:[{}[\]]|"[^"]*"\s*(?::|,|$|[}\]]))/.test(line.replace(BULLET_PREFIX, ""));
+}
+
+/** Pretty-prints a multi-line JSON run, repairing a duplicated opening brace; falls back to the raw lines. */
+function jsonFence(code: string) {
+  const candidates = [code, code.replace(/^\{\s*\n\s*\{/, "{")];
+  for (const candidate of candidates) {
+    try { return `\`\`\`json\n${JSON.stringify(JSON.parse(candidate), null, 2)}\n\`\`\``; } catch { /* try next */ }
+  }
+  const lines = code.split("\n");
+  const indent = Math.min(...lines.filter(line => line.trim()).map(line => line.match(/^\s*/)?.[0].length ?? 0));
+  return `\`\`\`json\n${lines.map(line => line.slice(indent)).join("\n")}\n\`\`\``;
+}
+
+function inline(text: string, kind: TextKind) {
+  const { plain, tokens } = protect(text.trim());
+  return block(plain, tokens, kind);
+}
+
+/**
+ * Formats text into Markdown. Text that already has line breaks (the preset practice tests) keeps them:
+ * each line is a paragraph, bullet lines become lists and JSON spread over lines becomes a code block.
+ */
+export function formatText(text: string, kind: TextKind): string {
+  if (!text) return "";
+  if (!text.includes("\n")) return formatLine(text, kind);
+  const lines = text.split(/\r?\n/);
+  const blocks: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    if (isJsonLine(line)) {
+      let j = i;
+      while (j < lines.length && (isJsonLine(lines[j]) || !lines[j].trim())) j++;
+      const code = lines.slice(i, j).map(l => l.replace(BULLET_PREFIX, "")).join("\n").trim();
+      if (code.includes("{") && code.includes("}")) { blocks.push(jsonFence(code)); i = j; continue; }
+    }
+    if (LIST_ITEM.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && LIST_ITEM.test(lines[i]) && !isJsonLine(lines[i])) { items.push(`- ${inline(lines[i].replace(LIST_ITEM, ""), kind)}`); i++; }
+      blocks.push(items.join("\n"));
+      continue;
+    }
+    blocks.push(formatLine(line, kind));
+    i++;
+  }
+  return blocks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
